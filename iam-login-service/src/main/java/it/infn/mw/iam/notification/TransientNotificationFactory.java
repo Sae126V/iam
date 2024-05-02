@@ -67,7 +67,8 @@ public class TransientNotificationFactory implements NotificationFactory {
   private final Configuration freeMarkerConfiguration;
 
   @Autowired
-  public TransientNotificationFactory(Configuration fm, NotificationProperties np, AdminNotificationDeliveryStrategy ands, GroupManagerNotificationDeliveryStrategy gmds) {
+  public TransientNotificationFactory(Configuration fm, NotificationProperties np,
+      AdminNotificationDeliveryStrategy ands, GroupManagerNotificationDeliveryStrategy gmds) {
     this.freeMarkerConfiguration = fm;
     this.properties = np;
     this.adminNotificationDeliveryStrategy = ands;
@@ -199,7 +200,8 @@ public class TransientNotificationFactory implements NotificationFactory {
 
     LOG.debug("Create group membership admin notification for request {}", groupRequest.getUuid());
     return createMessage("adminHandleGroupRequest.ftl", model, IamNotificationType.GROUP_MEMBERSHIP,
-        subject, groupManagerDeliveryStrategy.resolveGroupManagersEmailAddresses(groupRequest.getGroup()));
+        subject,
+        groupManagerDeliveryStrategy.resolveGroupManagersEmailAddresses(groupRequest.getGroup()));
   }
 
   @Override
@@ -249,6 +251,26 @@ public class TransientNotificationFactory implements NotificationFactory {
     return notification;
   }
 
+  @Override
+  public IamEmailNotification createAupReminderMessage(IamAccount account) {
+    String recipient = account.getUserInfo().getName();
+    String aupUrl = String.format("%s/iam/aup/sign", baseUrl);
+
+    Map<String, Object> model = new HashMap<>();
+    model.put(RECIPIENT_FIELD, recipient);
+    model.put("aupUrl", aupUrl);
+    model.put(ORGANISATION_NAME, organisationName);
+
+    IamEmailNotification notification = createMessage("signAupReminder.ftl", model,
+        IamNotificationType.AUP_REMINDER, properties.getSubject().get("reminder"),
+        asList(account.getUserInfo().getEmail()));
+
+    LOG.debug("Created reminder message for signing the account {} AUP. Signing URL: {}",
+        account.getUuid(), aupUrl);
+
+    return notification;
+  }
+
   protected IamEmailNotification createMessage(String templateName, Map<String, Object> model,
       IamNotificationType messageType, String subject, List<String> receiverAddress) {
 
@@ -265,8 +287,8 @@ public class TransientNotificationFactory implements NotificationFactory {
       message.setCreationTime(new Date());
       message.setDeliveryStatus(IamDeliveryStatus.PENDING);
       message.setReceivers(receiverAddress.stream()
-              .map(a -> IamNotificationReceiver.forAddress(message, a))
-              .collect(Collectors.toList()));
+        .map(a -> IamNotificationReceiver.forAddress(message, a))
+        .collect(Collectors.toList()));
 
       return message;
     } catch (IOException | TemplateException e) {

@@ -39,4 +39,6 @@ public interface NotificationFactory {
   IamEmailNotification createGroupMembershipApprovedMessage(IamGroupRequest groupRequest);
 
   IamEmailNotification createGroupMembershipRejectedMessage(IamGroupRequest groupRequest);
+  
+  IamEmailNotification createAupReminderMessage(IamAccount account);
 }
