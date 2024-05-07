@@ -4,7 +4,6 @@ CREATE TABLE iam_aup (ID BIGINT IDENTITY NOT NULL,
   last_update_time TIMESTAMP NOT NULL, 
   name VARCHAR(36) NOT NULL UNIQUE, 
   sig_validity_days BIGINT NOT NULL,
-  aup_reminders_days VARCHAR(128) NOT NULL,
   text LONGVARCHAR NOT NULL, 
   PRIMARY KEY (ID));
   
