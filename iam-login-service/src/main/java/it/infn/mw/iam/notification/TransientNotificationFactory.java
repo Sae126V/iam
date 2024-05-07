@@ -18,6 +18,9 @@ package it.infn.mw.iam.notification;
 import static java.util.Arrays.asList;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -26,25 +29,26 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import freemarker.template.Configuration;
-import freemarker.template.TemplateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 
+import freemarker.template.Configuration;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
 import it.infn.mw.iam.api.account.password_reset.PasswordResetController;
 import it.infn.mw.iam.core.IamDeliveryStatus;
 import it.infn.mw.iam.core.IamNotificationType;
 import it.infn.mw.iam.notification.service.resolver.AdminNotificationDeliveryStrategy;
 import it.infn.mw.iam.notification.service.resolver.GroupManagerNotificationDeliveryStrategy;
 import it.infn.mw.iam.persistence.model.IamAccount;
+import it.infn.mw.iam.persistence.model.IamAup;
 import it.infn.mw.iam.persistence.model.IamEmailNotification;
 import it.infn.mw.iam.persistence.model.IamGroupRequest;
 import it.infn.mw.iam.persistence.model.IamNotificationReceiver;
 import it.infn.mw.iam.persistence.model.IamRegistrationRequest;
-import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
-import freemarker.template.Template;
 
 public class TransientNotificationFactory implements NotificationFactory {
 
@@ -252,18 +256,29 @@ public class TransientNotificationFactory implements NotificationFactory {
   }
 
   @Override
-  public IamEmailNotification createAupReminderMessage(IamAccount account) {
+  public IamEmailNotification createAupReminderMessage(IamAccount account, IamAup aup) {
     String recipient = account.getUserInfo().getName();
     String aupUrl = String.format("%s/iam/aup/sign", baseUrl);
+
+    LocalDate now = LocalDate.now();
+    long signatureValidityInDays = aup.getSignatureValidityInDays();
+    LocalDate signatureTime = account.getAupSignature()
+      .getSignatureTime()
+      .toInstant()
+      .atZone(ZoneId.systemDefault())
+      .toLocalDate();
+    LocalDate signatureValidTime = signatureTime.plusDays(signatureValidityInDays);
+    long missingDays = ChronoUnit.DAYS.between(now, signatureValidTime);
 
     Map<String, Object> model = new HashMap<>();
     model.put(RECIPIENT_FIELD, recipient);
     model.put("aupUrl", aupUrl);
     model.put(ORGANISATION_NAME, organisationName);
+    model.put("missingDays", missingDays);
 
-    IamEmailNotification notification = createMessage("signAupReminder.ftl", model,
-        IamNotificationType.AUP_REMINDER, properties.getSubject().get("reminder"),
-        asList(account.getUserInfo().getEmail()));
+    IamEmailNotification notification =
+        createMessage("signAupReminder.ftl", model, IamNotificationType.AUP_REMINDER,
+            properties.getSubject().get("reminder"), asList(account.getUserInfo().getEmail()));
 
     LOG.debug("Created reminder message for signing the account {} AUP. Signing URL: {}",
         account.getUuid(), aupUrl);

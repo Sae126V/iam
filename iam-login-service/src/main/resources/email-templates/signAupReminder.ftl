@@ -6,7 +6,7 @@ service.
 You are requested to sign the ${organisationName} Acceptable Usage Policy
 (AUP) in order to continue to be part of the ${organisationName} VO.
 
-The AUP must be signed before the following date X.
+The AUP will expire in ${missingDays} days.
 
 After this date your membership will be SUSPENDED
 and you will NOT be able to obtain tokens/VOMS credentials

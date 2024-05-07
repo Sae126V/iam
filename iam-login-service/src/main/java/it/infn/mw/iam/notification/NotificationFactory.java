@@ -18,6 +18,7 @@ package it.infn.mw.iam.notification;
 import java.util.Optional;
 
 import it.infn.mw.iam.persistence.model.IamAccount;
+import it.infn.mw.iam.persistence.model.IamAup;
 import it.infn.mw.iam.persistence.model.IamEmailNotification;
 import it.infn.mw.iam.persistence.model.IamGroupRequest;
 import it.infn.mw.iam.persistence.model.IamRegistrationRequest;
@@ -40,5 +41,5 @@ public interface NotificationFactory {
 
   IamEmailNotification createGroupMembershipRejectedMessage(IamGroupRequest groupRequest);
   
-  IamEmailNotification createAupReminderMessage(IamAccount account);
+  IamEmailNotification createAupReminderMessage(IamAccount account, IamAup aup);
 }
