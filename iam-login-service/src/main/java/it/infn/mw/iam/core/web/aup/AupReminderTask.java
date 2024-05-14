@@ -30,9 +30,10 @@ import it.infn.mw.iam.persistence.model.IamAccount;
 import it.infn.mw.iam.persistence.model.IamAupSignature;
 import it.infn.mw.iam.persistence.repository.IamAccountRepository;
 import it.infn.mw.iam.persistence.repository.IamAupRepository;
+import it.infn.mw.iam.persistence.repository.IamEmailNotificationRepository;
 
 @Component
-public class AupReminderTask implements Runnable {
+public class AupReminderTask {
 
   @Autowired
   IamAccountRepository accounts;
@@ -42,6 +43,9 @@ public class AupReminderTask implements Runnable {
 
   @Autowired
   NotificationFactory notification;
+
+  @Autowired
+  IamEmailNotificationRepository emailNotificationRepo;
 
   public void sendAupReminders() {
     aupRepo.findDefaultAup().ifPresent(aup -> {
@@ -59,18 +63,14 @@ public class AupReminderTask implements Runnable {
           LocalDate signatureValidTime = signatureTime.plusDays(signatureValidityInDays);
 
           long daysUntilExpiration = ChronoUnit.DAYS.between(now, signatureValidTime);
+          String email = account.getUserInfo().getEmail();
           if (daysUntilExpiration >= 0 && intervals.contains((int) daysUntilExpiration)) {
-            notification.createAupReminderMessage(account, aup);
+            if (emailNotificationRepo.countAupRemindersPerAccount(email) == 0)
+              notification.createAupReminderMessage(account, aup);
           }
         }
       }
     });
-  }
-
-
-  @Override
-  public void run() {
-    sendAupReminders();
   }
 
 }

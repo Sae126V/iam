@@ -34,7 +34,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 
-import it.infn.mw.iam.config.aup.AupProperties;
 import it.infn.mw.iam.config.lifecycle.LifecycleProperties;
 import it.infn.mw.iam.core.lifecycle.ExpiredAccountsHandler;
 import it.infn.mw.iam.core.user.IamAccountService;
@@ -82,9 +81,6 @@ public class TaskConfig implements SchedulingConfigurer {
 
   @Autowired
   LifecycleProperties lifecycleProperties;
-
-  @Autowired
-  AupProperties aupProperties;
 
   @Autowired
   ExpiredAccountsHandler expiredAccountsHandler;
@@ -135,6 +131,11 @@ public class TaskConfig implements SchedulingConfigurer {
     deviceCodeService.clearExpiredDeviceCodes();
   }
 
+  @Scheduled(fixedRateString = "4", timeUnit = TimeUnit.HOURS)
+  public void scheduledAupRemindersTask() {
+    aupReminderTask.sendAupReminders();
+  }
+
   public void schedulePendingNotificationsDelivery(final ScheduledTaskRegistrar taskRegistrar) {
 
     if (notificationTaskPeriodMsec < 0) {
@@ -160,22 +161,11 @@ public class TaskConfig implements SchedulingConfigurer {
     }
   }
 
-  public void scheduledAupRemindersTask(final ScheduledTaskRegistrar taskRegistrar) {
-    if (!aupProperties.isEnabled()) {
-      LOG.info("Aup reminders task is disabled");
-    } else {
-      final String cronSchedule = aupProperties.getCronSchedule();
-      LOG.info("Scheduling Aup reminders task with schedule: {}", cronSchedule);
-      taskRegistrar.addCronTask(aupReminderTask, cronSchedule);
-    }
-  }
-
   @Override
   public void configureTasks(final ScheduledTaskRegistrar taskRegistrar) {
     taskRegistrar.setScheduler(taskScheduler);
     schedulePendingNotificationsDelivery(taskRegistrar);
     scheduledExpiredAccountsTask(taskRegistrar);
-    scheduledAupRemindersTask(taskRegistrar);
   }
 
 }

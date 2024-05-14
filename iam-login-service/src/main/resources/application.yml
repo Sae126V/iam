@@ -280,7 +280,3 @@ lifecycle:
     expired-accounts-task:
       cron-schedule:  ${IAM_LIFECYCLE_EXPIRED_ACCOUNT_TASK_CRON_SCHEDULE:0 */5 * * * *}
       enabled: ${IAM_LIFECYCLE_EXPIRED_ACCOUNT_TASK_ENABLED:true}
-
-aup:
-  enabled: ${IAM_AUP_REMINDERS_ENABLED:true}
-  cron-schedule: ${IAM_AUP_REMINDERS_CRON_SCHEDULE:0 */2 * * * *}
