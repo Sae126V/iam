@@ -27,6 +27,7 @@ import org.springframework.stereotype.Component;
 
 import it.infn.mw.iam.notification.NotificationFactory;
 import it.infn.mw.iam.persistence.model.IamAccount;
+import it.infn.mw.iam.persistence.model.IamAup;
 import it.infn.mw.iam.persistence.model.IamAupSignature;
 import it.infn.mw.iam.persistence.repository.IamAccountRepository;
 import it.infn.mw.iam.persistence.repository.IamAupRepository;
@@ -50,27 +51,36 @@ public class AupReminderTask {
   public void sendAupReminders() {
     aupRepo.findDefaultAup().ifPresent(aup -> {
       LocalDate now = LocalDate.now();
-      List<Integer> intervals = Arrays.stream(aup.getAupRemindersInDays().split(","))
-        .map(Integer::valueOf)
-        .collect(Collectors.toList());
+      List<Integer> intervals = parseReminderIntervals(aup.getAupRemindersInDays());
 
-      for (IamAccount account : accounts.findAll()) {
-        IamAupSignature signature = account.getAupSignature();
-        if (signature != null && signature.getSignatureTime() != null) {
-          LocalDate signatureTime =
-              signature.getSignatureTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-          long signatureValidityInDays = aup.getSignatureValidityInDays();
-          LocalDate signatureValidTime = signatureTime.plusDays(signatureValidityInDays);
-
-          long daysUntilExpiration = ChronoUnit.DAYS.between(now, signatureValidTime);
-          String email = account.getUserInfo().getEmail();
-          if (daysUntilExpiration >= 0 && intervals.contains((int) daysUntilExpiration)) {
-            if (emailNotificationRepo.countAupRemindersPerAccount(email) == 0)
-              notification.createAupReminderMessage(account, aup);
-          }
-        }
-      }
+      accounts.findAll().forEach(account -> {
+        processAccountForReminder(account, aup, intervals, now);
+      });
     });
+  }
+
+  private List<Integer> parseReminderIntervals(String aupRemindersInDays) {
+    return Arrays.stream(aupRemindersInDays.split(","))
+      .map(Integer::valueOf)
+      .collect(Collectors.toList());
+  }
+
+  private void processAccountForReminder(IamAccount account, IamAup aup, List<Integer> intervals,
+      LocalDate now) {
+    IamAupSignature signature = account.getAupSignature();
+    if (signature != null && signature.getSignatureTime() != null) {
+      LocalDate signatureTime =
+          signature.getSignatureTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+      long signatureValidityInDays = aup.getSignatureValidityInDays();
+      LocalDate signatureValidTime = signatureTime.plusDays(signatureValidityInDays);
+
+      long daysUntilExpiration = ChronoUnit.DAYS.between(now, signatureValidTime);
+      String email = account.getUserInfo().getEmail();
+      if (daysUntilExpiration >= 0 && intervals.contains((int) daysUntilExpiration)) {
+        if (emailNotificationRepo.countAupRemindersPerAccount(email) == 0)
+          notification.createAupReminderMessage(account, aup);
+      }
+    }
   }
 
 }

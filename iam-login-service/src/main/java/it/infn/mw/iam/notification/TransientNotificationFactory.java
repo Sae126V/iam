@@ -276,7 +276,7 @@ public class TransientNotificationFactory implements NotificationFactory {
     model.put(ORGANISATION_NAME, organisationName);
     model.put("missingDays", missingDays);
 
-    String subject = String.format("AUP signature reminder");
+    String subject = "AUP signature reminder";
 
     IamEmailNotification notification = createMessage("signAupReminder.ftl", model,
         IamNotificationType.AUP_REMINDER, subject, asList(account.getUserInfo().getEmail()));
