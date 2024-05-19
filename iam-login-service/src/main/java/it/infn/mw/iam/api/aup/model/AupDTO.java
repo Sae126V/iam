@@ -50,7 +50,7 @@ public class AupDTO {
 
   @NotNull(message = "Invalid AUP: aupRemindersInDays is required")
   @Pattern(regexp = "\\d+,\\d+,\\d+",
-      message = "Invalid AUP: aupRemindersInDays must be a sequence of three comma-separated Strings")
+      message = "Invalid AUP: aupRemindersInDays must be a sequence of three comma-separated numbers")
   String aupRemindersInDays;
 
   @JsonSerialize(using = JsonDateSerializer.class)

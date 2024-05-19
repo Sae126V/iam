@@ -126,7 +126,8 @@ public class AupIntegrationTests extends AupTestSupport {
   public void aupCreationRequiresAuthenticatedUser() throws JsonProcessingException, Exception {
     Date now = new Date();
     String reminders = "1,15,30";
-    AupDTO aup = new AupDTO(DEFAULT_AUP_URL, DEFAULT_AUP_TEXT, DEFAULT_AUP_DESC, -1L, now, now, reminders);
+    AupDTO aup =
+        new AupDTO(DEFAULT_AUP_URL, DEFAULT_AUP_TEXT, DEFAULT_AUP_DESC, -1L, now, now, reminders);
 
     mvc
       .perform(
@@ -140,7 +141,8 @@ public class AupIntegrationTests extends AupTestSupport {
   public void aupCreationRequiresAdminPrivileges() throws JsonProcessingException, Exception {
     Date now = new Date();
     String reminders = "1,15,30";
-    AupDTO aup = new AupDTO(DEFAULT_AUP_URL, DEFAULT_AUP_TEXT, DEFAULT_AUP_DESC, -1L, now, now, reminders);
+    AupDTO aup =
+        new AupDTO(DEFAULT_AUP_URL, DEFAULT_AUP_TEXT, DEFAULT_AUP_DESC, -1L, now, now, reminders);
 
     mvc
       .perform(
@@ -257,6 +259,36 @@ public class AupIntegrationTests extends AupTestSupport {
           post("/iam/aup").contentType(APPLICATION_JSON).content(mapper.writeValueAsString(aup)))
       .andExpect(status().isBadRequest())
       .andExpect(jsonPath("$.error").value("Invalid AUP: signatureValidityInDays must be >= 0"));
+  }
+
+  @Test
+  @WithMockUser(username = "admin", roles = {"ADMIN", "USER"})
+  public void aupCreationRequiresAupRemindersInDays() throws JsonProcessingException, Exception {
+    AupDTO aup = new AupDTO(DEFAULT_AUP_URL, DEFAULT_AUP_TEXT, null, 3L, null, null, null);
+    Date now = new Date();
+    mockTimeProvider.setTime(now.getTime());
+
+    mvc
+      .perform(
+          post("/iam/aup").contentType(APPLICATION_JSON).content(mapper.writeValueAsString(aup)))
+      .andExpect(status().isBadRequest())
+      .andExpect(jsonPath("$.error").value("Invalid AUP: aupRemindersInDays is required"));
+  }
+
+  @Test
+  @WithMockUser(username = "admin", roles = {"ADMIN", "USER"})
+  public void aupCreationRequiresValidAupRemindersInDays()
+      throws JsonProcessingException, Exception {
+    AupDTO aup = new AupDTO(DEFAULT_AUP_URL, DEFAULT_AUP_TEXT, null, 3L, null, null, "30,15,7,1");
+    Date now = new Date();
+    mockTimeProvider.setTime(now.getTime());
+
+    mvc
+      .perform(
+          post("/iam/aup").contentType(APPLICATION_JSON).content(mapper.writeValueAsString(aup)))
+      .andExpect(status().isBadRequest())
+      .andExpect(jsonPath("$.error").value(
+          "Invalid AUP: aupRemindersInDays must be a sequence of three comma-separated numbers"));
   }
 
   @Test
