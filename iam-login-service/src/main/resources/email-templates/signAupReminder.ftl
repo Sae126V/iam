@@ -8,9 +8,8 @@ You are requested to sign the ${organisationName} Acceptable Usage Policy
 
 The AUP will expire in ${missingDays} days.
 
-After this date your membership will be SUSPENDED
-and you will NOT be able to obtain tokens/VOMS credentials
-for the ${organisationName} VO.
+After this date you will NOT be able to obtain
+tokens/VOMS credentials for the ${organisationName} VO.
 
 Note however that you can restore your membership at 
 *any* time by simply pointing your browser to the 
