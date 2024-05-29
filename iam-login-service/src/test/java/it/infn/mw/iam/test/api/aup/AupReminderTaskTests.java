@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.Date;
 
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,34 +60,39 @@ import it.infn.mw.iam.test.util.notification.MockNotificationDelivery;
 @WithAnonymousUser
 @TestPropertySource(properties = {"notification.disable=false"})
 public class AupReminderTaskTests extends AupTestSupport {
-  
+
   @Autowired
   private AupConverter converter;
-  
+
   @Autowired
   private ObjectMapper mapper;
-  
+
   @Autowired
   private DefaultAupSignatureCheckService service;
-  
+
   @Autowired
   private IamAccountRepository accountRepo;
-  
+
   @Autowired
   private IamAupSignatureRepository signatureRepo;
 
   @Autowired
   private MockMvc mvc;
-  
+
   @Autowired
   private IamEmailNotificationRepository notificationRepo;
-  
+
   @Autowired
   private AupReminderTask aupTask;
-  
+
   @Autowired
   private MockNotificationDelivery notificationDelivery;
-  
+
+  @After
+  public void tearDown() throws InterruptedException {
+    notificationDelivery.clearDeliveredNotifications();
+  }
+
   @Test
   @WithMockUser(username = "admin", roles = {"ADMIN", "USER"})
   public void aupReminderEmailWorks() throws JsonProcessingException, Exception {
@@ -109,12 +115,14 @@ public class AupReminderTaskTests extends AupTestSupport {
     signatureRepo.createSignatureForAccount(testAccount, now);
 
     assertThat(service.needsAupSignature(testAccount), is(false));
-    
-    assertThat(notificationRepo.countAupRemindersPerAccount(testAccount.getUserInfo().getEmail()), equalTo(0));
-    
+
+    assertThat(notificationRepo.countAupRemindersPerAccount(testAccount.getUserInfo().getEmail()),
+        equalTo(0));
+
     aupTask.sendAupReminders();
     notificationDelivery.sendPendingNotifications();
-    assertThat(notificationRepo.countAupRemindersPerAccount(testAccount.getUserInfo().getEmail()), equalTo(1));
+    assertThat(notificationRepo.countAupRemindersPerAccount(testAccount.getUserInfo().getEmail()),
+        equalTo(1));
 
   }
 }
