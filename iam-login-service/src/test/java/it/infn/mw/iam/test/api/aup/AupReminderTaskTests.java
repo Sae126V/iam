@@ -22,6 +22,8 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Date;
 
 import org.junit.After;
@@ -83,7 +85,7 @@ public class AupReminderTaskTests extends AupTestSupport {
   private IamEmailNotificationRepository notificationRepo;
 
   @Autowired
-  private AupReminderTask aupTask;
+  private AupReminderTask aupReminderTask;
 
   @Autowired
   private MockNotificationDelivery notificationDelivery;
@@ -119,9 +121,50 @@ public class AupReminderTaskTests extends AupTestSupport {
     assertThat(notificationRepo.countAupRemindersPerAccount(testAccount.getUserInfo().getEmail()),
         equalTo(0));
 
-    aupTask.sendAupReminders();
+    aupReminderTask.sendAupReminders();
     notificationDelivery.sendPendingNotifications();
     assertThat(notificationRepo.countAupRemindersPerAccount(testAccount.getUserInfo().getEmail()),
+        equalTo(1));
+
+  }
+
+  @Test
+  @WithMockUser(username = "admin", roles = {"ADMIN", "USER"})
+  public void aupExpirationEmailWorks() throws JsonProcessingException, Exception {
+    AupDTO aup = converter.dtoFromEntity(buildDefaultAup());
+    aup.setSignatureValidityInDays(2L);
+
+    LocalDate today = LocalDate.now();
+    LocalDate twoDaysAgo = today.minusDays(2);
+
+    Date date = Date.from(twoDaysAgo.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    aup.setCreationTime(date);
+    aup.setLastUpdateTime(date);
+
+    mvc
+      .perform(
+          post("/iam/aup").contentType(APPLICATION_JSON).content(mapper.writeValueAsString(aup)))
+      .andExpect(status().isCreated());
+
+    IamAccount testAccount = accountRepo.findByUsername("test")
+      .orElseThrow(() -> new AssertionError("Expected test account not found"));
+
+    signatureRepo.createSignatureForAccount(testAccount, date);
+
+    assertThat(
+        notificationRepo.countAupExpirationMessPerAccount(testAccount.getUserInfo().getEmail()),
+        equalTo(0));
+
+    aupReminderTask.sendAupReminders();
+    notificationDelivery.sendPendingNotifications();
+    assertThat(
+        notificationRepo.countAupExpirationMessPerAccount(testAccount.getUserInfo().getEmail()),
+        equalTo(1));
+
+    aupReminderTask.sendAupReminders();
+    notificationDelivery.sendPendingNotifications();
+    assertThat(
+        notificationRepo.countAupExpirationMessPerAccount(testAccount.getUserInfo().getEmail()),
         equalTo(1));
 
   }

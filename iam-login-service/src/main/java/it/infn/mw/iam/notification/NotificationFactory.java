@@ -29,7 +29,8 @@ public interface NotificationFactory {
 
   IamEmailNotification createAccountActivatedMessage(IamRegistrationRequest request);
 
-  IamEmailNotification createRequestRejectedMessage(IamRegistrationRequest request, Optional<String> motivation);
+  IamEmailNotification createRequestRejectedMessage(IamRegistrationRequest request,
+      Optional<String> motivation);
 
   IamEmailNotification createAdminHandleRequestMessage(IamRegistrationRequest request);
 
@@ -40,6 +41,8 @@ public interface NotificationFactory {
   IamEmailNotification createGroupMembershipApprovedMessage(IamGroupRequest groupRequest);
 
   IamEmailNotification createGroupMembershipRejectedMessage(IamGroupRequest groupRequest);
-  
+
   IamEmailNotification createAupReminderMessage(IamAccount account, IamAup aup);
+
+  IamEmailNotification createAupSignatureExpMessage(IamAccount account);
 }

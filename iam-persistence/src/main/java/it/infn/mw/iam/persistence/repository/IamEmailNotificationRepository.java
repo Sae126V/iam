@@ -53,4 +53,9 @@ public interface IamEmailNotificationRepository
       + " and r.emailAddress = :email_address")
   Integer countAupRemindersPerAccount(@Param("email_address") String emailAddress);
 
+  @Query("select count(n) from IamEmailNotification n join n.receivers r where n.notificationType = it.infn.mw.iam.core.IamNotificationType.AUP_EXPIRATION"
+      + " and n.deliveryStatus <> it.infn.mw.iam.core.IamDeliveryStatus.DELIVERY_ERROR"
+      + " and r.emailAddress = :email_address")
+  Integer countAupExpirationMessPerAccount(@Param("email_address") String emailAddress);
+
 }

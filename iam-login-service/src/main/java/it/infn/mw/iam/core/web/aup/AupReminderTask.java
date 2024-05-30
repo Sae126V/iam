@@ -77,8 +77,14 @@ public class AupReminderTask {
       long daysUntilExpiration = ChronoUnit.DAYS.between(now, signatureValidTime);
       String email = account.getUserInfo().getEmail();
       if (daysUntilExpiration >= 0 && intervals.contains((int) daysUntilExpiration)) {
-        if (emailNotificationRepo.countAupRemindersPerAccount(email) == 0)
+        if (emailNotificationRepo.countAupRemindersPerAccount(email) == 0) {
           notification.createAupReminderMessage(account, aup);
+        }
+      }
+      if (daysUntilExpiration == 0) {
+        if (emailNotificationRepo.countAupExpirationMessPerAccount(email) == 0) {
+          notification.createAupSignatureExpMessage(account);
+        }
       }
     }
   }
