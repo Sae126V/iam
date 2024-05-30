@@ -43,7 +43,8 @@ public abstract class IamAuditApplicationEvent extends ApplicationEvent {
     AUP,
     MEMBERSHIP,
     CLIENT,
-    TOKEN
+    TOKEN,
+    CERTIFICATE_LINK,
   }
 
   private static final long serialVersionUID = -6276169409979227109L;
