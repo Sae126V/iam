@@ -41,6 +41,7 @@ import it.infn.mw.iam.test.util.db.MySQL57TestContainer;
 @Transactional
 @ActiveProfiles({"mysql-test", "flyway-repair"})
 @DirtiesContext
+@Disabled("MySQL 5.7 no more supported")
 public class Upgradev1_7_2Db57Tests extends UpgradeDbTestSupport {
 
   public static final String DB_DUMP = "iam-v1.7.2-mysql5.7.sql";
@@ -57,7 +58,6 @@ public class Upgradev1_7_2Db57Tests extends UpgradeDbTestSupport {
   }
 
   @Test
-  @Disabled
   public void dbUpgradeSucceeds() throws IOException {
     assertThat(accountService.count("Admin User"), equalTo(1L));
   }
