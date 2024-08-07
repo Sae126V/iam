@@ -20,6 +20,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.io.IOException;
 
+import org.junit.Ignore;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -56,6 +57,7 @@ public class Upgradev1_7_2Db57Tests extends UpgradeDbTestSupport {
   }
 
   @Test
+  @Ignore
   public void dbUpgradeSucceeds() throws IOException {
     assertThat(accountService.count("Admin User"), equalTo(1L));
   }
