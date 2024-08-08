@@ -530,8 +530,6 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <fork>true</fork>
-          <skip>false</skip>
           <mainClass>it.infn.mw.iam.IamLoginService</mainClass>
           <image>
             <name>indigoiam/iam-login-service-bp:${iam.image.tag}</name>
@@ -539,13 +537,6 @@
               <BPL_SPRING_CLOUD_BINDINGS_ENABLED>false</BPL_SPRING_CLOUD_BINDINGS_ENABLED>
             </env>
           </image>
-          <executions>
-            <execution>
-              <goals>
-                <goal>repackage</goal>
-              </goals>
-            </execution>
-          </executions>
         </configuration>
 
         <executions>
