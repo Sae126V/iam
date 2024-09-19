@@ -73,25 +73,23 @@ public class IamTestClientConfiguration {
   private IamClientApplicationProperties iamClientConfig;
 
   @Bean
-  SecurityFilterChain filterChain(HttpSecurity http, OIDCAuthenticationFilter oidcFilter) throws Exception {
+  SecurityFilterChain filterChain(HttpSecurity http, OIDCAuthenticationFilter oidcFilter)
+      throws Exception {
 
-      http.authorizeHttpRequests(requests -> requests
-              .antMatchers("/**")
-              .authenticated()
-              .antMatchers("/", "/user", "/error", "/openid_connect_login**", "/webjars/**")
-              .permitAll())
-              .exceptionHandling(handling -> handling
-                      .authenticationEntryPoint(new SendUnauhtorizedAuthenticationEntryPoint()))
-              .logout(logout -> logout
-                      .logoutSuccessUrl("/")
-                      .permitAll())
-              .csrf(csrf -> csrf
-                      .csrfTokenRepository(csrfTokenRepository()))
-              .addFilterAfter(csrfHeaderFilter(), CsrfFilter.class)
-              .addFilterAfter(oidcFilter, SecurityContextPersistenceFilter.class)
-              .sessionManagement(management -> management
-                      .enableSessionUrlRewriting(false)
-                      .sessionCreationPolicy(SessionCreationPolicy.ALWAYS));
+    http
+      .authorizeHttpRequests(requests -> requests
+        .antMatchers("/", "/user", "/error", "/openid_connect_login**", "/webjars/**")
+        .permitAll()
+        .antMatchers("/**")
+        .authenticated())
+      .exceptionHandling(handling -> handling
+        .authenticationEntryPoint(new SendUnauhtorizedAuthenticationEntryPoint()))
+      .logout(logout -> logout.logoutSuccessUrl("/").permitAll())
+      .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository()))
+      .addFilterAfter(csrfHeaderFilter(), CsrfFilter.class)
+      .addFilterAfter(oidcFilter, SecurityContextPersistenceFilter.class)
+      .sessionManagement(management -> management.enableSessionUrlRewriting(false)
+        .sessionCreationPolicy(SessionCreationPolicy.ALWAYS));
 
     return http.build();
   }
