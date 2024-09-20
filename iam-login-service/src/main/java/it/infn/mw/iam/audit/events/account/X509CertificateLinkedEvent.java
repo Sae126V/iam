@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package it.infn.mw.iam.audit.events.account.x509;
+package it.infn.mw.iam.audit.events.account;
 
-import it.infn.mw.iam.audit.events.account.AccountEvent;
 import it.infn.mw.iam.authn.x509.IamX509AuthenticationCredential;
 import it.infn.mw.iam.persistence.model.IamAccount;
 
