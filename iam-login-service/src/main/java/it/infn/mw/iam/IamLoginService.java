@@ -41,7 +41,6 @@ import it.infn.mw.iam.core.util.IamBanner;
 
 @SpringBootApplication
 @EnableTransactionManagement
-
 // @formatter:off
 @ComponentScan(basePackages = {
     "it.infn.mw.iam.config", 
@@ -104,7 +103,6 @@ public class IamLoginService {
 
     propsConfig.setLocations(new ClassPathResource("iam.version.properties"),
         new ClassPathResource("git.properties"));
-
     propsConfig.setIgnoreResourceNotFound(true);
     propsConfig.setIgnoreUnresolvablePlaceholders(true);
 
