@@ -19,6 +19,8 @@ import static it.infn.mw.iam.core.IamGroupRequestStatus.APPROVED;
 import static it.infn.mw.iam.core.IamGroupRequestStatus.PENDING;
 import static it.infn.mw.iam.core.IamGroupRequestStatus.REJECTED;
 
+import static java.util.Objects.isNull;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -148,6 +150,20 @@ public class DefaultGroupRequestsService implements GroupRequestsService {
     request = updateGroupRequestStatus(request, APPROVED);
     notificationFactory.createGroupMembershipApprovedMessage(request);
     eventPublisher.publishEvent(new GroupRequestApprovedEvent(this, request));
+
+    while(!isNull(group)) {
+      // Approve all other PENDING requests for any intermediate groups up to the root
+      IamGroupRequest pendingRequest = 
+          groupRequestRepository.findByGroupIdAndStatus(group.getId(), PENDING);
+
+      if (!isNull(pendingRequest) && !pendingRequest.getId().equals(request.getId())) {
+        updateGroupRequestStatus(pendingRequest, APPROVED);
+        notificationFactory.createGroupMembershipApprovedMessage(pendingRequest);
+        eventPublisher.publishEvent(new GroupRequestApprovedEvent(this, pendingRequest));
+      }
+
+      group = group.getParentGroup();
+    }
 
     return converter.fromEntity(request);
   }
