@@ -17,25 +17,28 @@
 -->
 <div class="modal-header">
     <h3 class="modal-title">
-        Delete client <strong>{{ $ctrl.client.client_name }}</strong> ?
+        Revoke tokens for <strong>{{ $ctrl.client.client_name }}</strong> ?
     </h3>
 </div>
 
 <div class="modal-body">
     <p class="text-justify text-wrapped">
-        The following client will be reset by revoking all associated tokens and changing the client secret:
+        Select at least one of the following options
     </p>
-    <dl>
-        <dt>Name</dt>
-        <dd>{{ $ctrl.client.client_name }}</dd>
-        <dt>Client ID</dt>
-        <dd>{{ $ctrl.client.client_id}}</dd>
-    </dl>
+    <ul>
+        <li><input type="checkbox" name="refresh" ng-model="$ctrl.revokeRefreshTokens"><label for="refresh"> Revoke
+                refresh tokens</label></li> <small>All associated access tokens will be removed</small>
+        <li><input type="checkbox" name="access" ng-model="$ctrl.revokeAccessTokens"><label
+                for="access"> Revoke access tokens</label>
+        </li>
+    </ul>
 </div>
 
+
+
 <div class="modal-footer">
-    <button class="btn btn-primary" type="button" id="modal-btn-confirm" ng-disabled="!$ctrl.enabled"
-        ng-click="$ctrl.ok()">Remove client</button>
+    <button class="btn btn-primary" type="button" id="modal-btn-confirm" ng-click="$ctrl.ok()"
+        ng-disabled="!($ctrl.revokeAccessTokens || $ctrl.revokeRefreshTokens)">Revoke tokens</button>
 
     <button class="btn btn-danger" type="button" id="modal-btn-cancel" ng-click="$ctrl.cancel()">Cancel</button>
 </div>
