@@ -89,11 +89,13 @@ import it.infn.mw.iam.persistence.model.IamLabel;
 import it.infn.mw.iam.persistence.model.IamOidcId;
 import it.infn.mw.iam.persistence.model.IamSamlId;
 import it.infn.mw.iam.persistence.model.IamSshKey;
+import it.infn.mw.iam.persistence.model.IamTotpMfa;
 import it.infn.mw.iam.persistence.model.IamX509Certificate;
 import it.infn.mw.iam.persistence.repository.IamAccountRepository;
 import it.infn.mw.iam.persistence.repository.IamAupSignatureRepository;
 import it.infn.mw.iam.persistence.repository.IamAuthoritiesRepository;
 import it.infn.mw.iam.persistence.repository.IamGroupRepository;
+import it.infn.mw.iam.persistence.repository.IamTotpMfaRepository;
 import it.infn.mw.iam.persistence.repository.client.IamAccountClientRepository;
 import it.infn.mw.iam.registration.RegistrationRequestDto;
 import it.infn.mw.iam.registration.TokenGenerator;
@@ -115,6 +117,7 @@ public class DefaultIamAccountService implements IamAccountService, ApplicationE
   private final DefaultIamGroupService iamGroupService;
   private final TokenGenerator tokenGenerator;
   private final IamAupSignatureRepository iamAupSignatureRepo;
+  private final IamTotpMfaRepository iamTotpMfaRepository;
 
   public DefaultIamAccountService(Clock clock, IamAccountRepository accountRepo,
       IamGroupRepository groupRepo, IamAuthoritiesRepository authoritiesRepo,
@@ -122,7 +125,7 @@ public class DefaultIamAccountService implements IamAccountService, ApplicationE
       OAuth2TokenEntityService tokenService, IamAccountClientRepository accountClientRepo,
       NotificationFactory notificationFactory, IamProperties iamProperties,
       DefaultIamGroupService iamGroupService, TokenGenerator tokenGenerator,
-      IamAupSignatureRepository iamAupSignatureRepo) {
+      IamAupSignatureRepository iamAupSignatureRepo, IamTotpMfaRepository iamTotpMfaRepository) {
 
     this.clock = clock;
     this.accountRepo = accountRepo;
@@ -137,6 +140,7 @@ public class DefaultIamAccountService implements IamAccountService, ApplicationE
     this.iamGroupService = iamGroupService;
     this.tokenGenerator = tokenGenerator;
     this.iamAupSignatureRepo = iamAupSignatureRepo;
+    this.iamTotpMfaRepository = iamTotpMfaRepository;
   }
 
   private void labelSetEvent(IamAccount account, IamLabel label) {
@@ -362,11 +366,17 @@ public class DefaultIamAccountService implements IamAccountService, ApplicationE
     }
   }
 
+  private void deleteTotpMfa(IamAccount account) {
+    iamTotpMfaRepository.findByAccount(account)
+        .ifPresent(iamTotpMfaRepository::delete);
+  }
+
   @Override
   public IamAccount deleteAccount(IamAccount account) {
     checkNotNull(account, "cannot delete a null account");
     deleteTokensForAccount(account);
     removeClientLinks(account);
+    deleteTotpMfa(account);
     accountRepo.delete(account);
 
     eventPublisher.publishEvent(new AccountRemovedEvent(this, account,
