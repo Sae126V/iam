@@ -58,6 +58,7 @@ import it.infn.mw.iam.api.scim.exception.ScimFilterUnsupportedException;
 import it.infn.mw.iam.api.scim.exception.ScimPatchOperationNotSupported;
 import it.infn.mw.iam.api.scim.exception.ScimResourceExistsException;
 import it.infn.mw.iam.api.scim.exception.ScimResourceNotFoundException;
+import it.infn.mw.iam.api.scim.model.ScimIndigoUser;
 import it.infn.mw.iam.api.scim.model.ScimFilter;
 import it.infn.mw.iam.api.scim.model.ScimListResponse;
 import it.infn.mw.iam.api.scim.model.ScimListResponse.ScimListResponseBuilder;
@@ -74,6 +75,7 @@ import it.infn.mw.iam.core.user.IamAccountService;
 import it.infn.mw.iam.core.user.exception.CredentialAlreadyBoundException;
 import it.infn.mw.iam.core.user.exception.UserAlreadyExistsException;
 import it.infn.mw.iam.notification.NotificationFactory;
+import it.infn.mw.iam.notification.NotificationProperties;
 import it.infn.mw.iam.persistence.model.IamAccount;
 import it.infn.mw.iam.persistence.repository.IamAccountRepository;
 import it.infn.mw.iam.persistence.repository.IamGroupRepository;
@@ -83,13 +85,14 @@ import it.infn.mw.iam.registration.validation.UsernameValidator;
 public class ScimUserProvisioning
     implements ScimProvisioning<ScimUser, ScimUser>, ApplicationEventPublisherAware {
 
-  protected static final EnumSet<UpdaterType> SUPPORTED_UPDATER_TYPES = EnumSet.of(
-      ACCOUNT_ADD_OIDC_ID, ACCOUNT_REMOVE_OIDC_ID, ACCOUNT_ADD_SAML_ID, ACCOUNT_REMOVE_SAML_ID,
-      ACCOUNT_ADD_SSH_KEY, ACCOUNT_REMOVE_SSH_KEY, ACCOUNT_ADD_X509_CERTIFICATE,
-      ACCOUNT_REMOVE_X509_CERTIFICATE, ACCOUNT_REPLACE_ACTIVE, ACCOUNT_REPLACE_EMAIL,
-      ACCOUNT_REPLACE_FAMILY_NAME, ACCOUNT_REPLACE_GIVEN_NAME, ACCOUNT_REPLACE_PASSWORD,
-      ACCOUNT_REPLACE_PICTURE, ACCOUNT_REPLACE_USERNAME, ACCOUNT_REMOVE_PICTURE, 
-      ACCOUNT_REPLACE_SERVICE_ACCOUNT, ACCOUNT_REPLACE_AFFILIATION);
+
+  protected static final EnumSet<UpdaterType> SUPPORTED_UPDATER_TYPES =
+      EnumSet.of(ACCOUNT_ADD_OIDC_ID, ACCOUNT_REMOVE_OIDC_ID, ACCOUNT_ADD_SAML_ID,
+          ACCOUNT_REMOVE_SAML_ID, ACCOUNT_ADD_SSH_KEY, ACCOUNT_REMOVE_SSH_KEY,
+          ACCOUNT_ADD_X509_CERTIFICATE, ACCOUNT_REMOVE_X509_CERTIFICATE, ACCOUNT_REPLACE_ACTIVE,
+          ACCOUNT_REPLACE_EMAIL, ACCOUNT_REPLACE_FAMILY_NAME, ACCOUNT_REPLACE_GIVEN_NAME,
+          ACCOUNT_REPLACE_PASSWORD, ACCOUNT_REPLACE_PICTURE, ACCOUNT_REPLACE_USERNAME,
+          ACCOUNT_REMOVE_PICTURE, ACCOUNT_REPLACE_SERVICE_ACCOUNT, ACCOUNT_REPLACE_AFFILIATION);
 
 
   private final IamAccountService accountService;
@@ -97,6 +100,7 @@ public class ScimUserProvisioning
   private final UserConverter userConverter;
   private final DefaultAccountUpdaterFactory updatersFactory;
   private final NotificationFactory notificationFactory;
+  private final NotificationProperties notificationProperties;
 
   private ApplicationEventPublisher eventPublisher;
 
@@ -105,8 +109,10 @@ public class ScimUserProvisioning
       PasswordEncoder passwordEncoder, UserConverter userConverter, OidcIdConverter oidcIdConverter,
       SamlIdConverter samlIdConverter, SshKeyConverter sshKeyConverter,
       X509CertificateConverter x509CertificateConverter, UsernameValidator usernameValidator,
-      NotificationFactory notificationFactory, IamGroupRepository groupRepository) {
+      NotificationFactory notificationFactory, NotificationProperties notificationProperties,
+      IamGroupRepository groupRepository) {
 
+    this.notificationProperties = notificationProperties;
     this.accountService = accountService;
     this.accountRepository = accountRepository;
     this.userConverter = userConverter;
@@ -515,13 +521,13 @@ public class ScimUserProvisioning
       accountRepository.save(account);
       for (AccountUpdater u : updatesToPublish) {
         u.publishUpdateEvent(this, eventPublisher);
-        handleSpecificUpdateType(account, u);
+        handleSpecificUpdateType(account, u, op.getValue().getIndigoUser());
       }
-
     }
   }
 
-  private void handleSpecificUpdateType(IamAccount account, AccountUpdater u) {
+  private void handleSpecificUpdateType(IamAccount account, AccountUpdater u,
+      ScimIndigoUser indigoUser) {
     if (ACCOUNT_REPLACE_ACTIVE.equals(u.getType())) {
       if (account.isActive()) {
         notificationFactory.createAccountRestoredMessage(account);
@@ -536,6 +542,22 @@ public class ScimUserProvisioning
         notificationFactory.createRevokeServiceAccountMessage(account);
       }
     }
+
+    // Checking if the certificate update is true and only then is it generating the
+    // notification/log update
+    if (Boolean.TRUE.equals(notificationProperties.getCertificateUpdate())) {
+      if (ACCOUNT_ADD_X509_CERTIFICATE.equals(u.getType())) {
+
+        notificationFactory.createLinkedCertificateMessage(account,
+            indigoUser.getCertificates().get(0).asIamX509AuthenticationCredential());
+      }
+
+      else if (ACCOUNT_REMOVE_X509_CERTIFICATE.equals(u.getType())) {
+
+        notificationFactory.createUnlinkedCertificateMessage(account,
+            indigoUser.getCertificates().get(0).asIamX509AuthenticationCredential());
+      }
+    }
   }
 
   @Override
@@ -545,5 +567,4 @@ public class ScimUserProvisioning
 
     operations.forEach(op -> executePatchOperation(account, op));
   }
-
 }
