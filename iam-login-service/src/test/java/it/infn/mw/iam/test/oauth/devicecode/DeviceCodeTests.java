@@ -162,7 +162,7 @@ public class DeviceCodeTests extends EndpointsTestUtils {
     mvc
       .perform(post(DEVICE_CODE_ENDPOINT).contentType(APPLICATION_FORM_URLENCODED)
         .with(httpBasic(DEVICE_CODE_CLIENT_ID, DEVICE_CODE_CLIENT_SECRET))
-        .param("client_id", "device-code-client"))
+        .param("client_id", DEVICE_CODE_CLIENT_ID))
       .andExpect(status().isOk());
 
     mvc
@@ -182,7 +182,7 @@ public class DeviceCodeTests extends EndpointsTestUtils {
     mvc
       .perform(post(DEVICE_CODE_ENDPOINT).contentType(APPLICATION_FORM_URLENCODED)
         .with(httpBasic(DEVICE_CODE_CLIENT_ID, DEVICE_CODE_CLIENT_SECRET))
-        .param("client_id", "device-code-client")
+        .param("client_id", DEVICE_CODE_CLIENT_ID)
         .param("scope", "openid not-allowed-scope"))
       .andExpect(status().isBadRequest())
       .andExpect(jsonPath("$.error", equalTo("invalid_scope")))
@@ -198,7 +198,7 @@ public class DeviceCodeTests extends EndpointsTestUtils {
     String response = mvc
       .perform(post(DEVICE_CODE_ENDPOINT).contentType(APPLICATION_FORM_URLENCODED)
         .with(httpBasic(DEVICE_CODE_CLIENT_ID, DEVICE_CODE_CLIENT_SECRET))
-        .param("client_id", "device-code-client")
+        .param("client_id", DEVICE_CODE_CLIENT_ID)
         .param("scope", "openid profile offline_access"))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.user_code").isString())
@@ -277,7 +277,7 @@ public class DeviceCodeTests extends EndpointsTestUtils {
     response = mvc
       .perform(post(DEVICE_CODE_ENDPOINT).contentType(APPLICATION_FORM_URLENCODED)
         .with(httpBasic(DEVICE_CODE_CLIENT_ID, DEVICE_CODE_CLIENT_SECRET))
-        .param("client_id", "device-code-client")
+        .param("client_id", DEVICE_CODE_CLIENT_ID)
         .param("scope", "openid profile offline_access"))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.user_code").isString())
@@ -310,7 +310,7 @@ public class DeviceCodeTests extends EndpointsTestUtils {
     String response = mvc
       .perform(post(DEVICE_CODE_ENDPOINT).contentType(APPLICATION_FORM_URLENCODED)
         .with(httpBasic(DEVICE_CODE_CLIENT_ID, DEVICE_CODE_CLIENT_SECRET))
-        .param("client_id", "device-code-client")
+        .param("client_id", DEVICE_CODE_CLIENT_ID)
         .param("scope", "openid profile offline_access"))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.user_code").isString())
@@ -409,7 +409,7 @@ public class DeviceCodeTests extends EndpointsTestUtils {
     String response = mvc
       .perform(post(DEVICE_CODE_ENDPOINT).contentType(APPLICATION_FORM_URLENCODED)
         .with(httpBasic(DEVICE_CODE_CLIENT_ID, DEVICE_CODE_CLIENT_SECRET))
-        .param("client_id", "device-code-client")
+        .param("client_id", DEVICE_CODE_CLIENT_ID)
         .param("scope", "openid profile offline_access"))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.user_code").isString())
@@ -480,6 +480,11 @@ public class DeviceCodeTests extends EndpointsTestUtils {
       .andExpect(jsonPath("$[0].clientId", equalTo(DEVICE_CODE_CLIENT_ID)))
       .andExpect(jsonPath("$[0].userId", equalTo(TEST_USERNAME)));
 
+    mvc
+      .perform(post(TOKEN_ENDPOINT).with(httpBasic("client", "secret"))
+        .param("grant_type", DEVICE_CODE_GRANT_TYPE)
+        .param("device_code", deviceCode))
+      .andExpect(status().isUnauthorized());
 
     String tokenResponse = mvc
       .perform(
