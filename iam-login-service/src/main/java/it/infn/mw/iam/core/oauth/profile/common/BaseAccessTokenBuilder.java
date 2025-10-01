@@ -16,19 +16,33 @@
 package it.infn.mw.iam.core.oauth.profile.common;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.nimbusds.jwt.JWTClaimNames.AUDIENCE;
 import static it.infn.mw.iam.core.oauth.IamOAuth2RequestFactory.AUD_KEY;
 import static it.infn.mw.iam.core.oauth.granters.TokenExchangeTokenGranter.TOKEN_EXCHANGE_GRANT_TYPE;
+import static it.infn.mw.iam.core.oauth.profile.iam.IamExtraClaimNames.ACR;
+import static it.infn.mw.iam.core.oauth.profile.iam.IamExtraClaimNames.ACT;
+import static it.infn.mw.iam.core.oauth.profile.iam.IamExtraClaimNames.SCOPE;
 import static java.util.Objects.isNull;
+import static java.util.stream.Collectors.joining;
+import static org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames.CLIENT_ID;
+import static org.springframework.security.oauth2.core.oidc.StandardClaimNames.EMAIL;
+import static org.springframework.security.oauth2.core.oidc.StandardClaimNames.NAME;
+import static org.springframework.security.oauth2.core.oidc.StandardClaimNames.PREFERRED_USERNAME;
 
 import java.text.ParseException;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import org.mitre.oauth2.model.OAuth2AccessTokenEntity;
 import org.mitre.oauth2.model.SavedUserAuthentication;
 import org.mitre.openid.connect.model.UserInfo;
+import org.mitre.openid.connect.service.ScopeClaimTranslationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.common.exceptions.InvalidRequestException;
@@ -38,45 +52,108 @@ import org.springframework.security.oauth2.provider.OAuth2Request;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Maps;
 import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.JWTClaimNames;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTClaimsSet.Builder;
 import com.nimbusds.jwt.JWTParser;
 
 import it.infn.mw.iam.api.account.AccountUtils;
 import it.infn.mw.iam.config.IamProperties;
-import it.infn.mw.iam.core.oauth.profile.JWTAccessTokenBuilder;
-import it.infn.mw.iam.persistence.repository.IamTotpMfaRepository;
+import it.infn.mw.iam.core.oauth.profile.AccessTokenBuilder;
+import it.infn.mw.iam.core.oauth.profile.ClaimValueHelper;
 import it.infn.mw.iam.core.oauth.scope.pdp.ScopeFilter;
+import it.infn.mw.iam.persistence.model.IamAccount;
+import it.infn.mw.iam.persistence.repository.IamAccountRepository;
+import it.infn.mw.iam.persistence.repository.IamTotpMfaRepository;
+import it.infn.mw.iam.persistence.repository.UserInfoAdapter;
 
 @SuppressWarnings("deprecation")
-public abstract class BaseAccessTokenBuilder implements JWTAccessTokenBuilder {
+public abstract class BaseAccessTokenBuilder implements AccessTokenBuilder {
 
-  public static final Logger LOG = LoggerFactory.getLogger(BaseAccessTokenBuilder.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BaseAccessTokenBuilder.class);
 
-  public static final String SCOPE_CLAIM_NAME = "scope";
-  public static final String ACT_CLAIM_NAME = "act";
-  public static final String CLIENT_ID_CLAIM_NAME = "client_id";
-  public static final String SPACE = " ";
+  protected static final String SPACE = " ";
+  protected static final String SUBJECT_TOKEN = "subject_token";
 
-  public static final String SUBJECT_TOKEN = "subject_token";
+  private final IamProperties properties;
+  private final ScopeFilter scopeFilter;
+  private final IamAccountRepository accountRepository;
+  private final IamTotpMfaRepository totpMfaRepository;
+  private final AccountUtils accountUtils;
+  private final ClaimValueHelper claimValueHelper;
+  private final ScopeClaimTranslationService scopeClaimTranslationService;
+  private final Splitter splitter;
 
-  protected final IamProperties properties;
-  protected final ScopeFilter scopeFilter;
-
-  protected final Splitter splitter = Splitter.on(' ').trimResults().omitEmptyStrings();
-
-  protected final IamTotpMfaRepository totpMfaRepository;
-
-  protected final AccountUtils accountUtils;
-
-  protected BaseAccessTokenBuilder(IamProperties properties, IamTotpMfaRepository totpMfaRepository,
-      AccountUtils accountUtils, ScopeFilter scopeFilter) {
+  protected BaseAccessTokenBuilder(IamProperties properties, IamAccountRepository accountRepository,
+      IamTotpMfaRepository totpMfaRepository, AccountUtils accountUtils, ScopeFilter scopeFilter,
+      ClaimValueHelper claimValueHelper,
+      ScopeClaimTranslationService scopeClaimTranslationService) {
     this.properties = properties;
+    this.accountRepository = accountRepository;
     this.totpMfaRepository = totpMfaRepository;
     this.accountUtils = accountUtils;
     this.scopeFilter = scopeFilter;
+    this.claimValueHelper = claimValueHelper;
+    this.scopeClaimTranslationService = scopeClaimTranslationService;
+    this.splitter = Splitter.on(' ').trimResults().omitEmptyStrings();
   }
 
+  protected IamProperties getProperties() {
+    return properties;
+  }
+
+  protected ScopeFilter getScopeFilter() {
+    return scopeFilter;
+  }
+
+  protected IamTotpMfaRepository getTotpMfaRepository() {
+    return totpMfaRepository;
+  }
+
+  protected AccountUtils getAccountUtils() {
+    return accountUtils;
+  }
+
+  protected ClaimValueHelper getClaimValueHelper() {
+    return claimValueHelper;
+  }
+
+  public ScopeClaimTranslationService getScopeClaimTranslationService() {
+    return scopeClaimTranslationService;
+  }
+
+  protected Splitter getSplitter() {
+    return splitter;
+  }
+
+  @Override
+  public Set<String> getAdditionalAuthnInfoClaims() {
+    return Set.of(NAME, EMAIL, PREFERRED_USERNAME);
+  }
+
+  @Override
+  public JWTClaimsSet buildAccessToken(OAuth2AccessTokenEntity token,
+      OAuth2Authentication authentication, UserInfo userInfo, Instant issueTime) {
+
+    JWTClaimsSet.Builder builder = baseJWTSetup(token, authentication, userInfo, issueTime);
+
+    IamAccount account =
+        userInfo != null ? ((UserInfoAdapter) userInfo).getUserinfo().getIamAccount() : null;
+
+    scopeClaimTranslationService.getClaimsForScopeSet(token.getScope()).forEach(c -> {
+      Object value = this.getClaimValueHelper().resolveClaim(c, account, authentication);
+      if (!Objects.isNull(value)) {
+        if (value instanceof Collection<?> valueColl) {
+          if (!valueColl.isEmpty()) {
+            builder.claim(c, value);
+          }
+        } else {
+          builder.claim(c, value);
+        }
+      }
+    });
+    return builder.build();
+  }
 
   protected boolean isTokenExchangeRequest(OAuth2Authentication authentication) {
     return TOKEN_EXCHANGE_GRANT_TYPE.equals(authentication.getOAuth2Request().getGrantType());
@@ -96,7 +173,6 @@ public abstract class BaseAccessTokenBuilder implements JWTAccessTokenBuilder {
     }
   }
 
-
   protected void handleClientTokenExchange(JWTClaimsSet.Builder builder,
       OAuth2AccessTokenEntity token, OAuth2Authentication authentication, UserInfo userInfo) {
 
@@ -108,15 +184,15 @@ public abstract class BaseAccessTokenBuilder implements JWTAccessTokenBuilder {
       }
 
       Map<String, Object> actClaimContent = Maps.newHashMap();
-      actClaimContent.put("sub", authentication.getOAuth2Request().getClientId());
+      actClaimContent.put(JWTClaimNames.SUBJECT, authentication.getOAuth2Request().getClientId());
 
-      Object subjectTokenActClaim = subjectToken.getJWTClaimsSet().getClaim(ACT_CLAIM_NAME);
+      Object subjectTokenActClaim = subjectToken.getJWTClaimsSet().getClaim(ACT);
 
       if (!isNull(subjectTokenActClaim)) {
-        actClaimContent.put("act", subjectTokenActClaim);
+        actClaimContent.put(ACT, subjectTokenActClaim);
       }
 
-      builder.claim(ACT_CLAIM_NAME, actClaimContent);
+      builder.claim(ACT, actClaimContent);
 
     } catch (ParseException e) {
       LOG.error("Error getting claims from subject token: {}", e.getMessage(), e);
@@ -128,7 +204,7 @@ public abstract class BaseAccessTokenBuilder implements JWTAccessTokenBuilder {
       final String audience = authentication.getOAuth2Request()
         .getRefreshTokenRequest()
         .getRequestParameters()
-        .get(AUD_KEY);
+        .get(AUDIENCE);
       return !isNullOrEmpty(audience);
     }
     return false;
@@ -139,37 +215,41 @@ public abstract class BaseAccessTokenBuilder implements JWTAccessTokenBuilder {
     return !isNullOrEmpty(audience);
   }
 
-  protected JWTClaimsSet.Builder baseJWTSetup(OAuth2AccessTokenEntity token,
+  private JWTClaimsSet.Builder baseJWTSetup(OAuth2AccessTokenEntity token,
       OAuth2Authentication authentication, UserInfo userInfo, Instant issueTime) {
 
     String subject = null;
+    Object owner = null;
 
     if (userInfo == null) {
       subject = authentication.getName();
     } else {
       subject = userInfo.getSub();
+      owner = accountRepository.findByUuid(subject)
+        .orElseThrow(() -> new IllegalStateException(
+            "Creating a token for a user which is not present on database!"));
     }
 
-    Builder builder = new JWTClaimsSet.Builder().issuer(properties.getIssuer())
+    Builder builder = new JWTClaimsSet.Builder().issuer(getProperties().getIssuer())
       .issueTime(Date.from(issueTime))
       .expirationTime(token.getExpiration())
       .subject(subject)
       .jwtID(UUID.randomUUID().toString());
 
 
-    builder.claim(CLIENT_ID_CLAIM_NAME, token.getClient().getClientId());
+    builder.claim(CLIENT_ID, token.getClient().getClientId());
 
     String audience = null;
 
     if (hasAudienceRequest(authentication)) {
-      audience = authentication.getOAuth2Request().getRequestParameters().get(AUD_KEY);
+      audience = authentication.getOAuth2Request().getRequestParameters().get(AUDIENCE);
     }
 
     if (hasRefreshTokenAudienceRequest(authentication)) {
       audience = authentication.getOAuth2Request()
         .getRefreshTokenRequest()
         .getRequestParameters()
-        .get(AUD_KEY);
+        .get(AUDIENCE);
     }
 
     if (!isNullOrEmpty(audience)) {
@@ -182,15 +262,47 @@ public abstract class BaseAccessTokenBuilder implements JWTAccessTokenBuilder {
 
     addAcrClaimIfNeeded(builder, authentication);
 
-    token.setScope(scopeFilter.filterScopes(token.getScope(), authentication));
+    filterAndSetScopes(token, authentication);
+
+    if (getProperties().getAccessToken().isIncludeScope() && !token.getScope().isEmpty()) {
+      builder.claim(SCOPE, token.getScope().stream().collect(joining(SPACE)));
+    }
+
+    if (getProperties().getAccessToken().isIncludeAuthnInfo() && owner != null) {
+      Set<String> requiredClaims =
+          getScopeClaimTranslationService().getClaimsForScopeSet(token.getScope());
+      requiredClaims.retainAll(getAdditionalAuthnInfoClaims());
+      for (String claim : requiredClaims) {
+        builder.claim(claim,
+            getClaimValueHelper().resolveClaim(claim, (IamAccount) owner, authentication));
+      }
+    }
+
+    if (getProperties().getAccessToken().isIncludeNbf()) {
+      builder.notBeforeTime(Date.from(issueTime
+        .minus(Duration.ofSeconds(getProperties().getAccessToken().getNbfOffsetSeconds()))));
+    }
 
     return builder;
   }
 
+  private void filterAndSetScopes(OAuth2AccessTokenEntity token,
+      OAuth2Authentication authentication) {
+
+    if (authentication.getOAuth2Request().isRefresh()
+        && !authentication.getOAuth2Request().getRefreshTokenRequest().getScope().isEmpty()) {
+      token.setScope(scopeFilter.filterScopes(
+          authentication.getOAuth2Request().getRefreshTokenRequest().getScope(), authentication));
+    } else {
+      token.setScope(
+          scopeFilter.filterScopes(token.getAuthenticationHolder().getScope(), authentication));
+    }
+  }
+
   protected void addAcrClaimIfNeeded(Builder builder, OAuth2Authentication authentication) {
     if (authentication.getUserAuthentication() instanceof SavedUserAuthentication savedAuth
-        && savedAuth.getAdditionalInfo().get("acr") != null) {
-      builder.claim("acr", savedAuth.getAdditionalInfo().get("acr"));
+        && savedAuth.getAdditionalInfo().get(ACR) != null) {
+      builder.claim(ACR, savedAuth.getAdditionalInfo().get(ACR));
     }
   }
 }

@@ -16,129 +16,106 @@
 package it.infn.mw.iam.core.oauth.profile.common;
 
 import static java.util.stream.Collectors.joining;
-import static org.mitre.oauth2.service.IntrospectionResultAssembler.SCOPE;
+import static org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames.AUD;
+import static org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames.CLIENT_ID;
+import static org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames.EXP;
+import static org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames.IAT;
+import static org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames.ISS;
+import static org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames.JTI;
+import static org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames.NBF;
+import static org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames.SCOPE;
+import static org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames.SUB;
+import static org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames.TOKEN_TYPE;
+import static org.springframework.security.oauth2.core.OAuth2TokenIntrospectionClaimNames.USERNAME;
 
 import java.text.ParseException;
-import java.util.List;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
+import org.mitre.oauth2.model.ClientDetailsEntity;
 import org.mitre.oauth2.model.OAuth2AccessTokenEntity;
-import org.mitre.oauth2.service.IntrospectionResultAssembler;
+import org.mitre.oauth2.model.OAuth2RefreshTokenEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Sets;
+import com.nimbusds.jwt.JWTClaimsSet;
 
-import it.infn.mw.iam.config.IamProperties;
+import it.infn.mw.iam.core.oauth.introspection.model.TokenTypeHint;
 import it.infn.mw.iam.core.oauth.profile.IntrospectionResultHelper;
-import it.infn.mw.iam.core.oauth.scope.matchers.ScopeMatcher;
-import it.infn.mw.iam.core.oauth.scope.matchers.ScopeMatcherRegistry;
+import it.infn.mw.iam.core.user.IamAccountService;
+import it.infn.mw.iam.persistence.model.IamAccount;
 
 public abstract class BaseIntrospectionHelper implements IntrospectionResultHelper {
 
   public static final Logger LOG = LoggerFactory.getLogger(BaseIntrospectionHelper.class);
 
-  public static final String PROFILE = "profile";
-  public static final String AUDIENCE = "aud";
-  public static final String NAME = "name";
-  public static final String GIVEN_NAME = "given_name";
-  public static final String FAMILY_NAME = "family_name";
-  public static final String PREFERRED_USERNAME = "preferred_username";
-  public static final String EMAIL = "email";
-  public static final String GROUPS = "groups";
-  public static final String ORGANISATION_NAME = "organisation_name";
-  public static final String ISSUER = "iss";
-  public static final String EDUPERSON_SCOPED_AFFILIATION = "eduperson_scoped_affiliation";
-  public static final String EDUPERSON_ENTITLEMENT = "eduperson_entitlement";
-  public static final String ENTITLEMENTS = "entitlements";
-  public static final String EDUPERSON_ASSURANCE = "eduperson_assurance";
+  private final IamAccountService accountService;
 
-  private final IamProperties properties;
-  private final IntrospectionResultAssembler assembler;
-  private final ScopeMatcherRegistry scopeMatchersRegistry;
+  protected BaseIntrospectionHelper(IamAccountService accountService) {
 
-  public BaseIntrospectionHelper(IamProperties props, IntrospectionResultAssembler assembler,
-      ScopeMatcherRegistry scopeMatchersRegistry) {
-    this.properties = props;
-    this.assembler = assembler;
-    this.scopeMatchersRegistry = scopeMatchersRegistry;
+    this.accountService = accountService;
   }
 
-  public IamProperties getProperties() {
-    return properties;
+  @Override
+  public Map<String, Object> assembleIntrospectionResult(OAuth2AccessTokenEntity accessToken,
+      ClientDetailsEntity authenticatedClient) throws ParseException {
+
+    ClientDetailsEntity client = accessToken.getClient();
+    JWTClaimsSet claims = accessToken.getJwt().getJWTClaimsSet();
+    Map<String, Object> result = assembleCommonClaims(claims, client, TokenTypeHint.ACCESS_TOKEN);
+    result.put(SUB, claims.getSubject());
+    result.put(IAT, claims.getIssueTime());
+    result.put(ISS, claims.getIssuer());
+    includeIfNotNull(result, SCOPE, accessToken.getScope().stream().collect(joining(" ")));
+    return result;
   }
 
-  public IntrospectionResultAssembler getAssembler() {
-    return assembler;
+  @Override
+  public Map<String, Object> assembleIntrospectionResult(OAuth2RefreshTokenEntity refreshToken,
+      ClientDetailsEntity authenticatedClient) throws ParseException {
+
+    ClientDetailsEntity client = refreshToken.getClient();
+    JWTClaimsSet claims = refreshToken.getJwt().getJWTClaimsSet();
+    Map<String, Object> result = assembleCommonClaims(claims, client, TokenTypeHint.REFRESH_TOKEN);
+    includeIfNotEmpty(result, SCOPE, refreshToken.getAuthenticationHolder().getScope());
+    return result;
   }
 
-  public ScopeMatcherRegistry getScopeMatchersRegistry() {
-    return scopeMatchersRegistry;
+  protected Optional<IamAccount> loadUserFrom(String subject) {
+    return accountService.findByUuid(subject);
   }
 
-  protected void addScopeClaim(Map<String, Object> introspectionResult, Set<String> scopes) {
-    if (!scopes.isEmpty()) {
-      introspectionResult.put(SCOPE, scopes.stream().collect(joining(" ")));
+  protected Map<String, Object> assembleCommonClaims(JWTClaimsSet claims,
+      ClientDetailsEntity client, TokenTypeHint tokenType) {
+
+    Map<String, Object> result = new HashMap<>();
+    result.put(TOKEN_TYPE, tokenType);
+    result.put(CLIENT_ID, client.getClientId());
+    includeIfNotNull(result, EXP, claims.getExpirationTime());
+    result.put(JTI, claims.getJWTID());
+    Optional<IamAccount> account = loadUserFrom(claims.getSubject());
+    if (account.isPresent()) {
+      result.put(USERNAME, account.get().getUsername());
+    }
+    includeIfNotNull(result, NBF, claims.getNotBeforeTime());
+    includeIfNotEmpty(result, AUD, claims.getAudience());
+    return result;
+  }
+
+  protected void includeIfNotNull(Map<String, Object> result, String key, Object value) {
+
+    if (value != null) {
+      result.put(key, String.valueOf(value));
     }
   }
 
-  protected void addIssuerClaim(Map<String, Object> introspectionResult) {
-    final String oidcIssuer = getProperties().getIssuer();
-    String trailingSlashIssuer = oidcIssuer.endsWith("/") ? oidcIssuer : oidcIssuer + "/";
+  protected void includeIfNotEmpty(Map<String, Object> result, String key, Collection<?> value) {
 
-    introspectionResult.put(ISSUER, trailingSlashIssuer);
-  }
-
-  protected void addAudience(Map<String, Object> introspectionResult,
-      OAuth2AccessTokenEntity accessToken) {
-
-    try {
-
-      List<String> audience = accessToken.getJwt().getJWTClaimsSet().getAudience();
-
-      if (audience != null && !audience.isEmpty()) {
-        introspectionResult.put(AUDIENCE, audience.stream().collect(joining(" ")));
-      }
-
-    } catch (ParseException e) {
-      LOG.error("Error getting audience out of access token: {}", e.getMessage(), e);
+    if (!value.isEmpty()) {
+      result.put(key, value.stream().map(String::valueOf).collect(joining(" ")));
     }
-
-  }
-
-  protected void addAcrClaimIfNeeded(OAuth2AccessTokenEntity accessToken,
-      Map<String, Object> introspectionResult) {
-
-    try {
-      Object acr = accessToken.getJwt().getJWTClaimsSet().getClaim("acr");
-      if (acr instanceof String acrString) {
-        introspectionResult.put("acr", acrString);
-      }
-    } catch (ParseException e) {
-      LOG.error("Error getting acr claim out of access token: {}", e.getMessage(), e);
-    }
-
-  }
-
-  protected Set<String> filterScopes(OAuth2AccessTokenEntity accessToken, Set<String> authScopes) {
-
-    Set<ScopeMatcher> matchers = authScopes.stream()
-      .map(getScopeMatchersRegistry()::findMatcherForScope)
-      .collect(Collectors.toSet());
-
-    Set<String> filteredScopes = Sets.newHashSet();
-
-    // We must use for loop here since streams are not supported
-    // by this version of EclipseLink on entity collections
-    for (String accessTokenScope : accessToken.getScope()) {
-      if (matchers.stream().anyMatch(m -> m.matches(accessTokenScope))) {
-        filteredScopes.add(accessTokenScope);
-      }
-    }
-
-    return filteredScopes;
   }
 
 }
