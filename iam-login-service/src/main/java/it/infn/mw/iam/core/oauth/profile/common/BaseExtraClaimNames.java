@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package it.infn.mw.iam.core.oauth.profile.iam;
+package it.infn.mw.iam.core.oauth.profile.common;
 
-import it.infn.mw.iam.core.oauth.profile.common.BaseExtraClaimNames;
+import org.springframework.security.oauth2.core.oidc.StandardClaimNames;
 
-public interface IamExtraClaimNames extends BaseExtraClaimNames {
+public interface BaseExtraClaimNames extends StandardClaimNames {
 
-  String AFFILIATION = "affiliation";
-  String AMR = "amr";
-  String ATTR = "attr";
-  String EXTERNAL_AUTHN = "external_authn";
-  String GROUPS = "groups";
-  String LAST_LOGIN_AT = "last_login_at";
-  String SSH_KEYS = "ssh_keys";
-  String ORGANISATION_NAME = "organisation_name";
+  String ACR = "acr";
+
+  String ACT = "act";
+
+  String CLIENT_ID = "client_id";
+
+  String SCOPE = "scope";
+
 }
