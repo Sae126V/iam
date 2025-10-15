@@ -15,7 +15,6 @@
  */
 package it.infn.mw.iam.core.oidc;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -25,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriUtils;
 
 import com.nimbusds.openid.connect.sdk.federation.entities.EntityID;
 import com.nimbusds.openid.connect.sdk.federation.entities.EntityStatement;
@@ -52,8 +50,7 @@ public class TrustChainResolver {
   private EntityStatement fetchEntityStatement(String fetchEndpoint, String issuer, String subject)
       throws InvalidTrustChainException {
     try {
-      String url = String.format("%s?sub=%s", fetchEndpoint,
-          UriUtils.encode(subject, StandardCharsets.UTF_8));
+      String url = String.format("%s?sub=%s", fetchEndpoint, subject);
 
       String jwt = restTemplate.getForObject(url, String.class);
       EntityStatement es = EntityStatement.parse(jwt);
@@ -91,7 +88,7 @@ public class TrustChainResolver {
    * Recursion to build the Trust Chain up to a Trust Anchor
    */
   private List<List<EntityStatement>> buildChain(EntityStatement subordinateEC,
-      Set<String> seenEntityIds) throws InvalidTrustChainException {
+      Set<String> seenEntityIds) {
 
     String subId = subordinateEC.getEntityID().getValue();
 

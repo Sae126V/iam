@@ -96,8 +96,8 @@ public class TrustChainServiceTests {
         restTemplate.getForObject("https://rp.example/.well-known/openid-federation", String.class))
           .thenReturn(rpJwt);
 
-    when(restTemplate.getForObject("https://ta.example/fetch?sub=https%3A%2F%2Frp.example",
-        String.class)).thenReturn(taEsJwt);
+    when(restTemplate.getForObject("https://ta.example/fetch?sub=https://rp.example", String.class))
+      .thenReturn(taEsJwt);
 
     when(
         restTemplate.getForObject("https://ta.example/.well-known/openid-federation", String.class))
@@ -158,13 +158,11 @@ public class TrustChainServiceTests {
     when(restTemplate.getForObject("https://intermediate.example/.well-known/openid-federation",
         String.class)).thenReturn(iaEcJwt);
 
-    when(restTemplate.getForObject(
-        "https://intermediate.example/fetch?sub=https%3A%2F%2Frp.example", String.class))
-          .thenReturn(intermToRpJwt);
+    when(restTemplate.getForObject("https://intermediate.example/fetch?sub=https://rp.example",
+        String.class)).thenReturn(intermToRpJwt);
 
-    when(restTemplate.getForObject(
-        "https://ta.example/fetch?sub=https%3A%2F%2Fintermediate.example", String.class))
-          .thenReturn(taToIntermJwt);
+    when(restTemplate.getForObject("https://ta.example/fetch?sub=https://intermediate.example",
+        String.class)).thenReturn(taToIntermJwt);
 
     when(
         restTemplate.getForObject("https://ta.example/.well-known/openid-federation", String.class))
@@ -228,16 +226,14 @@ public class TrustChainServiceTests {
     when(restTemplate.getForObject("https://intermediate.example/.well-known/openid-federation",
         String.class)).thenReturn(iaEcJwt);
 
-    when(restTemplate.getForObject(
-        "https://intermediate.example/fetch?sub=https%3A%2F%2Frp.example", String.class))
-          .thenReturn(intermToRpJwt);
+    when(restTemplate.getForObject("https://intermediate.example/fetch?sub=https://rp.example",
+        String.class)).thenReturn(intermToRpJwt);
 
-    when(restTemplate.getForObject(
-        "https://ta.example/fetch?sub=https%3A%2F%2Fintermediate.example", String.class))
-          .thenReturn(taToIntermJwt);
+    when(restTemplate.getForObject("https://ta.example/fetch?sub=https://intermediate.example",
+        String.class)).thenReturn(taToIntermJwt);
 
-    when(restTemplate.getForObject("https://ta.example/fetch?sub=https%3A%2F%2Frp.example",
-        String.class)).thenReturn(taToRpJwt);
+    when(restTemplate.getForObject("https://ta.example/fetch?sub=https://rp.example", String.class))
+      .thenReturn(taToRpJwt);
 
     when(
         restTemplate.getForObject("https://ta.example/.well-known/openid-federation", String.class))
@@ -305,16 +301,14 @@ public class TrustChainServiceTests {
     when(restTemplate.getForObject("https://intermediate.example/.well-known/openid-federation",
         String.class)).thenReturn(iaEcJwt);
 
-    when(restTemplate.getForObject(
-        "https://intermediate.example/fetch?sub=https%3A%2F%2Frp.example", String.class))
-          .thenReturn(intermToRpJwt);
+    when(restTemplate.getForObject("https://intermediate.example/fetch?sub=https://rp.example",
+        String.class)).thenReturn(intermToRpJwt);
 
-    when(restTemplate.getForObject(
-        "https://ta1.example/fetch?sub=https%3A%2F%2Fintermediate.example", String.class))
-          .thenReturn(taToIntermJwt);
+    when(restTemplate.getForObject("https://ta1.example/fetch?sub=https://intermediate.example",
+        String.class)).thenReturn(taToIntermJwt);
 
-    when(restTemplate.getForObject("https://ta.example/fetch?sub=https%3A%2F%2Frp.example",
-        String.class)).thenReturn(taToRpJwt);
+    when(restTemplate.getForObject("https://ta.example/fetch?sub=https://rp.example", String.class))
+      .thenReturn(taToRpJwt);
 
     when(
         restTemplate.getForObject("https://ta.example/.well-known/openid-federation", String.class))
