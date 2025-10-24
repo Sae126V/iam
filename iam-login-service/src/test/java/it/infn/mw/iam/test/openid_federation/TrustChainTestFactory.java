@@ -20,12 +20,15 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.oauth2.sdk.GrantType;
+import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.openid.connect.sdk.federation.entities.EntityID;
 import com.nimbusds.openid.connect.sdk.federation.entities.EntityStatement;
@@ -92,7 +95,8 @@ public class TrustChainTestFactory {
   }
 
   /** Minimum Trust Chain: RP → TA */
-  public static TrustChain createRpToTaChain(String aud) throws JOSEException {
+  public static TrustChain createRpToTaChain(String aud, Set<ResponseType> responseTypes,
+      URI redirectUri) throws JOSEException {
     Date now = new Date();
     Date exp = new Date(now.getTime() + 600000);
 
@@ -101,9 +105,12 @@ public class TrustChainTestFactory {
 
     // RP self EC with authority_hint = TA
     OIDCClientMetadata clientMetadata = new OIDCClientMetadata();
-    clientMetadata.setRedirectionURI(URI.create(rp + "/callback"));
+    clientMetadata.setRedirectionURI(redirectUri);
     clientMetadata.setName("Relying Party");
     clientMetadata.setClientRegistrationTypes(List.of(ClientRegistrationType.EXPLICIT));
+    clientMetadata.setResponseTypes(responseTypes);
+    clientMetadata.setGrantTypes(Set.of(GrantType.AUTHORIZATION_CODE));
+    clientMetadata.setEmailContacts(List.of("iam-support@example.it"));
     EntityStatement rpEC =
         selfEC(rp, now, exp, List.of(new EntityID(ta)), null, clientMetadata, aud);
 

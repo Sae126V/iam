@@ -28,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.net.URI;
 import java.util.Date;
 import java.util.Optional;
 import java.util.Set;
@@ -44,6 +45,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.openid.connect.sdk.federation.entities.EntityStatement;
 import com.nimbusds.openid.connect.sdk.federation.trust.TrustChain;
 
@@ -62,6 +64,7 @@ public class FederationRegistrationControllerTests {
   private static final String IAM_OIDFED_CLIENT_REGISTRATION_ENDPOINT =
       "/iam/api/oid-fed/client-registration";
   private static final String IAM_CLIENT_API_URL = "/iam/api/clients/";
+  private static final URI REDIRECT_URI = URI.create("https://rp.example/callback");
 
   @Autowired
   private MockMvc mvc;
@@ -85,7 +88,7 @@ public class FederationRegistrationControllerTests {
 
   @Test
   public void testSuccessfullExplicitClientRegistration() throws Exception {
-    fakeChain = TrustChainTestFactory.createRpToTaChain(issuer);
+    fakeChain = TrustChainTestFactory.createRpToTaChain(issuer, null, REDIRECT_URI);
     EntityStatement rpEC = fakeChain.getLeafSelfStatement();
     String rpJwt = rpEC.getSignedStatement().serialize();
 
@@ -101,10 +104,66 @@ public class FederationRegistrationControllerTests {
   }
 
   @Test
+  public void testResponseTypesAreFiltered() throws Exception {
+    fakeChain = TrustChainTestFactory.createRpToTaChain(issuer,
+        Set.of(ResponseType.CODE_IDTOKEN, ResponseType.CODE), REDIRECT_URI);
+    EntityStatement rpEC = fakeChain.getLeafSelfStatement();
+    String rpJwt = rpEC.getSignedStatement().serialize();
+
+    when(trustChainService.validateFromEntityConfiguration(any())).thenReturn(fakeChain);
+
+    mvc
+      .perform(post(IAM_OIDFED_CLIENT_REGISTRATION_ENDPOINT)
+        .contentType("application/entity-statement+jwt")
+        .content(rpJwt))
+      .andDo(print())
+      .andExpect(status().isOk())
+      .andExpect(content().contentType("application/explicit-registration-response+jwt"));
+  }
+
+  @Test
+  public void testUnsupportedResponseTypeError() throws Exception {
+    fakeChain =
+        TrustChainTestFactory.createRpToTaChain(issuer, Set.of(ResponseType.IDTOKEN), REDIRECT_URI);
+    EntityStatement rpEC = fakeChain.getLeafSelfStatement();
+    String rpJwt = rpEC.getSignedStatement().serialize();
+
+    when(trustChainService.validateFromEntityConfiguration(any())).thenReturn(fakeChain);
+
+    mvc
+      .perform(post(IAM_OIDFED_CLIENT_REGISTRATION_ENDPOINT)
+        .contentType("application/entity-statement+jwt")
+        .content(rpJwt))
+      .andDo(print())
+      .andExpect(status().isBadRequest())
+      .andExpect(jsonPath("$.error", equalTo("invalid_client_metadata")))
+      .andExpect(jsonPath("$.error_description", equalTo("Unsupported response type")));
+  }
+
+  @Test
+  public void testMissingRedirectUriCausesError() throws Exception {
+    fakeChain = TrustChainTestFactory.createRpToTaChain(issuer, null, null);
+    EntityStatement rpEC = fakeChain.getLeafSelfStatement();
+    String rpJwt = rpEC.getSignedStatement().serialize();
+
+    when(trustChainService.validateFromEntityConfiguration(any())).thenReturn(fakeChain);
+
+    mvc
+      .perform(post(IAM_OIDFED_CLIENT_REGISTRATION_ENDPOINT)
+        .contentType("application/entity-statement+jwt")
+        .content(rpJwt))
+      .andDo(print())
+      .andExpect(status().isBadRequest())
+      .andExpect(jsonPath("$.error", equalTo("invalid_redirect_uri")))
+      .andExpect(jsonPath("$.error_description",
+          equalTo("Missing redirect uris from RP Entity Statement")));
+  }
+
+  @Test
   @WithMockOAuthUser(user = "admin", scopes = "iam:admin.write")
   public void testRelyingPartyClientUpdateThroughApiClientsEndpointReturnsException()
       throws Exception {
-    fakeChain = TrustChainTestFactory.createRpToTaChain(issuer);
+    fakeChain = TrustChainTestFactory.createRpToTaChain(issuer, null, REDIRECT_URI);
     EntityStatement rpEC = fakeChain.getLeafSelfStatement();
     String rpJwt = rpEC.getSignedStatement().serialize();
 
@@ -131,7 +190,8 @@ public class FederationRegistrationControllerTests {
 
   @Test
   public void testInvalidAudienceDuringRegistration() throws Exception {
-    fakeChain = TrustChainTestFactory.createRpToTaChain("http://wrong-audience");
+    fakeChain =
+        TrustChainTestFactory.createRpToTaChain("http://wrong-audience", null, REDIRECT_URI);
     EntityStatement rpEC = fakeChain.getLeafSelfStatement();
     String rpJwt = rpEC.getSignedStatement().serialize();
 
@@ -149,7 +209,7 @@ public class FederationRegistrationControllerTests {
 
   @Test
   public void testClientDisabledWhenExpired() throws Exception {
-    fakeChain = TrustChainTestFactory.createRpToTaChain(null);
+    fakeChain = TrustChainTestFactory.createRpToTaChain(null, null, REDIRECT_URI);
     Optional<ClientDetailsEntity> client = clientRepo.findByClientId("client-cred");
     assertTrue(client.isPresent());
 
@@ -176,7 +236,7 @@ public class FederationRegistrationControllerTests {
 
   @Test
   public void testClientDeletedAndRecreatedWhenAlreadyExists() throws Exception {
-    fakeChain = TrustChainTestFactory.createRpToTaChain(issuer);
+    fakeChain = TrustChainTestFactory.createRpToTaChain(issuer, null, REDIRECT_URI);
     EntityStatement rpEC = fakeChain.getLeafSelfStatement();
     String rpJwt = rpEC.getSignedStatement().serialize();
 
