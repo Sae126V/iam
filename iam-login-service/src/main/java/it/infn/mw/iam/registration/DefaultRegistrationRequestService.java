@@ -263,11 +263,11 @@ public class DefaultRegistrationRequestService
       account.setEndTime(Date.from(endTime));
     }
 
-    notificationFactory.createAccountActivatedMessage(request);
-
     request.setStatus(APPROVED);
     request.setLastUpdateTime(Date.from(clock.instant()));
     requestRepository.save(request);
+
+    notificationFactory.createAccountActivatedMessage(request);
 
     eventPublisher.publishEvent(new RegistrationApproveEvent(this, request,
         "Approved registration request for user " + account.getUsername()));
