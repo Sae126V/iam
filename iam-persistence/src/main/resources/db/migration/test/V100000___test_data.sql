@@ -118,6 +118,7 @@ INSERT INTO client_scope (owner_id, scope) VALUES
   (8, 'read-tasks'),
   (8, 'storage.read:/'),
   (8, 'storage.write:/'),
+  (8, 'wlcg.groups'),
   (9, 'openid'),
   (9, 'profile'),
   (9, 'offline_access'),
@@ -286,11 +287,16 @@ CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(),1);
 
 INSERT INTO iam_group(id, name, uuid, description, creationtime, lastupdatetime) VALUES
 (1, 'Production', 'c617d586-54e6-411d-8e38-64967798fa8a', 'The production group', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()),
-(2, 'Analysis', '6a384bcd-d4b3-4b7f-a2fe-7d897ada0dd1', 'The analysis group', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP());
+(2, 'Analysis', '6a384bcd-d4b3-4b7f-a2fe-7d897ada0dd1', 'The analysis group', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP()),
+(3, 'Optional', '31d9230c-90ae-4457-a990-0c443ab4aacc', 'The optional group', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP());
 
 INSERT INTO iam_account_group(account_id, group_id) VALUES
 (2,1),
-(2,2);
+(2,2),
+(2,3);
+
+INSERT INTO iam_group_labels(name, prefix, val, group_id) VALUES
+('wlcg.optional-group', null, null, 3);
 
 INSERT INTO iam_account_authority(account_id, authority_id) VALUES
 (2,2),

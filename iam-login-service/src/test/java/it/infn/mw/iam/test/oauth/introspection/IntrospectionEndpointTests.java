@@ -207,7 +207,7 @@ public class IntrospectionEndpointTests extends TestTokensUtils {
     String accessToken = getPasswordToken("openid").accessToken();
     IamAccount a = accountRepository.findByUsername(TEST_USERNAME).orElseThrow();
 
-    assertThat(a.getGroups().size(), is(2));
+    assertThat(a.getGroups().size(), is(3));
 
     // @formatter:off
     introspect(PROTECTED_RESOURCE_ID, PROTECTED_RESOURCE_SECRET, accessToken, ACCESS_TOKEN)
@@ -235,7 +235,7 @@ public class IntrospectionEndpointTests extends TestTokensUtils {
     String accessToken = getClientCredentialsToken("openid profile").accessToken();
     IamAccount a = accountRepository.findByUsername(TEST_USERNAME).orElseThrow();
 
-    assertThat(a.getGroups().size(), is(2));
+    assertThat(a.getGroups().size(), is(3));
 
     // @formatter:off
     introspect(PROTECTED_RESOURCE_ID, PROTECTED_RESOURCE_SECRET, accessToken, ACCESS_TOKEN)
