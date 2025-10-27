@@ -241,12 +241,13 @@ INSERT INTO client_contact (owner_id, contact) VALUES
     
 INSERT INTO iam_user_info(ID, GIVENNAME, FAMILYNAME, EMAIL, EMAILVERIFIED, BIRTHDATE, GENDER, NICKNAME, AFFILIATION) VALUES
   (2, 'Test', 'User', 'test@iam.test', true, '1950-01-01','M','test','indigo'),
-  (1000, 'Test', 'MFA', 'testwithmfa@iam.test', true, '2000-01-01','F','testwithmfa','indigo');
+  (1000, 'Test', 'MFA', 'testwithmfa@iam.test', true, '2000-01-01','F','testwithmfa','indigo'),
+  (2000, 'User', 'Unverified', 'unverified@another.test', false, null, null, 'unverified', 'unknown affiliation');
 
 INSERT INTO iam_account(id, uuid, username, password, user_info_id, creationtime, lastupdatetime, active, service_account) VALUES
   (2, '80e5fb8d-b7c8-451a-89ba-346ae278a66f', 'test', '$2a$10$UZeOZKD1.dj5oiTsZKD03OETA9FXCKGqBuuijhsxYygZpOPtWMUni', 2, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), true, false),
-  (1000, '467c882e-90da-11ec-b909-0242ac120002', 'test-with-mfa', '$2a$12$S3lUZw/ESq9lULn5he6bBu9KNGCvs7C2rWo0XdVC6t65ITwAc22w2', 1000, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), true, false);
-
+  (1000, '467c882e-90da-11ec-b909-0242ac120002', 'test-with-mfa', '$2a$12$S3lUZw/ESq9lULn5he6bBu9KNGCvs7C2rWo0XdVC6t65ITwAc22w2', 1000, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), true, false),
+  (2000, '37d205e3-df24-4171-a9a4-07b427055782', 'unverified-user', '$2a$10$UZeOZKD1.dj5oiTsZKD03OETA9FXCKGqBuuijhsxYygZpOPtWMUni', 2000, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), true, false);
 
 INSERT INTO iam_oidc_id(issuer, subject, account_id) VALUES
 ('https://accounts.google.com', '105440632287425289613', 2),

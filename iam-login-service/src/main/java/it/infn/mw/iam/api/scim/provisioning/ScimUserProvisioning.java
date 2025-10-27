@@ -386,6 +386,12 @@ public class ScimUserProvisioning
   public ScimUser create(final ScimUser user) {
 
     IamAccount newAccount = userConverter.entityFromDto(user);
+    /* 
+     * It sets the new created user as a verified user
+     * TODO fix this work-around
+     */
+    newAccount.getUserInfo().setEmailVerified(true);
+    newAccount.setConfirmationKey(null);
 
     try {
       IamAccount account = accountService.createAccount(newAccount);

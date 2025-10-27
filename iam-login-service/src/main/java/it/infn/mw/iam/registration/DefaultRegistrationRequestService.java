@@ -255,6 +255,7 @@ public class DefaultRegistrationRequestService
     account.setResetKey(tokenGenerator.generateToken());
     account.setLastUpdateTime(Date.from(clock.instant()));
     account.setLabels(request.getLabels());
+    account.getUserInfo().setEmailVerified(true);
 
     if (!isNull(lifecycleProperties.getAccount().getAccountLifetimeDays())
         && lifecycleProperties.getAccount().getAccountLifetimeDays() > 0) {
