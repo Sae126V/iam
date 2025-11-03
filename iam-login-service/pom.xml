@@ -287,6 +287,12 @@
     <dependency>
       <groupId>org.mitre</groupId>
       <artifactId>openid-connect-server</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.eclipse.persistence</groupId>
+          <artifactId>org.eclipse.persistence.core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
