@@ -31,6 +31,7 @@ import com.nimbusds.jwt.JWT;
 import it.infn.mw.iam.api.client.service.ClientService;
 import it.infn.mw.iam.audit.events.tokens.RevocationEvent;
 import it.infn.mw.iam.core.oauth.introspection.model.TokenTypeHint;
+import it.infn.mw.iam.persistence.model.IamAccount;
 import it.infn.mw.iam.persistence.repository.IamOAuthAccessTokenRepository;
 import it.infn.mw.iam.persistence.repository.IamOAuthRefreshTokenRepository;
 
@@ -121,5 +122,17 @@ public class IamTokenRevocationService implements TokenRevocationService {
     } catch (ParseException e) {
       throw new IllegalStateException("Unexpected JWT ParseException error: " + e.getMessage());
     }
+  }
+
+  @Override
+  public void revokeAccessTokens(IamAccount account) {
+
+    accessTokenRepo.findAccessTokensForUser(account.getUsername()).forEach(this::revokeAccessToken);
+  }
+
+  @Override
+  public void revokeRefreshTokens(IamAccount account) {
+
+    refreshTokenRepo.findRefreshTokensForUser(account.getUsername()).forEach(this::revokeRefreshToken);
   }
 }

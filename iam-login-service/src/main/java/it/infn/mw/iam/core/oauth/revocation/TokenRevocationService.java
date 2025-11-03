@@ -21,6 +21,8 @@ import org.mitre.oauth2.model.ClientDetailsEntity;
 import org.mitre.oauth2.model.OAuth2AccessTokenEntity;
 import org.mitre.oauth2.model.OAuth2RefreshTokenEntity;
 
+import it.infn.mw.iam.persistence.model.IamAccount;
+
 public interface TokenRevocationService {
 
   public boolean isAccessTokenRevoked(OAuth2AccessTokenEntity token) throws ParseException;
@@ -37,4 +39,7 @@ public interface TokenRevocationService {
 
   public void revokeRefreshTokens(ClientDetailsEntity client);
 
+  public void revokeAccessTokens(IamAccount account);
+
+  public void revokeRefreshTokens(IamAccount account);
 }

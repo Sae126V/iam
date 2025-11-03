@@ -51,6 +51,12 @@ public interface IamOAuthAccessTokenRepository
 
   @Query("select t from OAuth2AccessTokenEntity t "
       + "where t.authenticationHolder.userAuth.name = :userId "
+      + "and 'resource-token' not member of t.scope "
+      + "and 'registration-token' not member of t.scope")
+  List<OAuth2AccessTokenEntity> findAccessTokensForUser(@Param("userId") String userId);
+
+  @Query("select t from OAuth2AccessTokenEntity t "
+      + "where t.authenticationHolder.userAuth.name = :userId "
       + "and t.expiration is NOT NULL "
       + "and t.expiration > :timestamp "
       + "and 'resource-token' not member of t.scope "
