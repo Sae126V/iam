@@ -202,7 +202,7 @@ public class AuthorizationCodeIntegrationTests extends ScopePolicyTestUtils {
   }
 
   @Test
-  public void testAuthzCodeAudienceSupport() throws IOException, ParseException {
+  public void testAuthzCodeAudienceSupport() throws Exception {
 
     String[] audienceKeys = {"aud", "audience"};
 
@@ -406,7 +406,7 @@ public class AuthorizationCodeIntegrationTests extends ScopePolicyTestUtils {
   }
 
   @Test
-  public void testNarrowerResourceIndicator() throws IOException, ParseException {
+  public void testNarrowerResourceIndicator() throws Exception {
 
     ValidatableResponse tokenEndpointResp = getTokenResponseWithAudience("resource", "resource",
         "http://example1.org http://example2.org", "http://example1.org");
@@ -421,7 +421,7 @@ public class AuthorizationCodeIntegrationTests extends ScopePolicyTestUtils {
   }
 
   @Test
-  public void testFilteredResourceIndicator() throws IOException, ParseException {
+  public void testFilteredResourceIndicator() throws Exception {
 
     ValidatableResponse tokenEndpointResp = getTokenResponseWithAudience("resource", "resource",
         "http://storm.org http://dcache.org", "http://storm.org http://rucio.org");
@@ -436,7 +436,7 @@ public class AuthorizationCodeIntegrationTests extends ScopePolicyTestUtils {
   }
 
   @Test
-  public void testFilteredResourceIndicatorWithAudRequest() throws IOException, ParseException {
+  public void testFilteredResourceIndicatorWithAudRequest() throws Exception {
 
     ValidatableResponse tokenEndpointResp = getTokenResponseWithAudience("resource", "audience",
         "http://1.org http://2.org", "http://1.org http://3.org");

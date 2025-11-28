@@ -37,13 +37,13 @@ import org.mitre.oauth2.model.OAuth2AccessTokenEntity;
 import org.mitre.oauth2.model.OAuth2RefreshTokenEntity;
 import org.mitre.oauth2.repository.AuthenticationHolderRepository;
 import org.mitre.oauth2.service.ClientDetailsEntityService;
-import org.mitre.oauth2.service.impl.DefaultOAuth2ProviderTokenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import it.infn.mw.iam.core.IamTokenService;
 import it.infn.mw.iam.persistence.repository.IamOAuthAccessTokenRepository;
 import it.infn.mw.iam.persistence.repository.IamOAuthRefreshTokenRepository;
 import it.infn.mw.iam.test.util.annotation.IamNoMvcTest;
@@ -76,7 +76,7 @@ public class IamTokenRepositoryTests {
   private ClientDetailsEntityService clientDetailsService;
 
   @Autowired
-  private DefaultOAuth2ProviderTokenService tokenService;
+  private IamTokenService tokenService;
 
   @Before
   public void setup() {
