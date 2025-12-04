@@ -15,15 +15,13 @@
  */
 package it.infn.mw.iam.test.core;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 
 import java.util.Optional;
 
-import org.junit.After;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.mitre.oauth2.model.ClientDetailsEntity;
 import org.mitre.oauth2.service.ClientDetailsEntityService;
 import org.mockito.Mock;
@@ -33,7 +31,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.transaction.annotation.Transactional;
 
 import it.infn.mw.iam.IamLoginService;
 import it.infn.mw.iam.api.account.AccountUtils;
@@ -49,48 +47,38 @@ import it.infn.mw.iam.persistence.repository.client.IamAccountClientRepository;
 import it.infn.mw.iam.persistence.repository.client.IamClientRepository;
 import it.infn.mw.iam.test.api.requests.GroupRequestsTestUtils;
 
-@SuppressWarnings("deprecation")
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = {IamLoginService.class}, webEnvironment = WebEnvironment.MOCK)
-public class IamSecurityExpressionMethodsTests extends GroupRequestsTestUtils {
+@Transactional
+class IamSecurityExpressionMethodsTests extends GroupRequestsTestUtils {
 
-  public static final String TEST_CLIENT_ID = "client";
-
-  @Autowired
-  private GroupRequestUtils groupRequestUtils;
+  static final String TEST_CLIENT_ID = "client";
 
   @Autowired
-  private OAuth2AuthenticationScopeResolver scopeResolver;
+  GroupRequestUtils groupRequestUtils;
 
   @Autowired
-  private IamGroupRequestRepository repo;
+  OAuth2AuthenticationScopeResolver scopeResolver;
 
   @Autowired
-  private IamAccountClientRepository accountClientRepo;
+  IamGroupRequestRepository repo;
 
   @Autowired
-  private IamAccountRepository accountRepo;
+  IamAccountClientRepository accountClientRepo;
 
   @Autowired
-  private ClientService clientService;
+  IamAccountRepository accountRepo;
 
   @Autowired
-  private ClientDetailsEntityService clientDetailsService;
+  ClientService clientService;
+
+  @Autowired
+  ClientDetailsEntityService clientDetailsService;
 
   @Autowired
   AccountUtils accountUtils;
 
   @Mock
-  private IamClientRepository clientRepo;
-
-  @After
-  public void destroy() {
-    repo.deleteAll();
-    clientService.unlinkClientFromAccount(clientDetailsService.loadClientByClientId(TEST_CLIENT_ID),
-        accountRepo.findByUsername(TEST_ADMIN).get());
-    clientService.unlinkClientFromAccount(clientDetailsService.loadClientByClientId(TEST_CLIENT_ID),
-        accountRepo.findByUsername("test_200").get());
-  }
+  IamClientRepository clientRepo;
 
   private IamSecurityExpressionMethods getMethods() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -100,7 +88,7 @@ public class IamSecurityExpressionMethodsTests extends GroupRequestsTestUtils {
 
   @Test
   @WithMockUser(roles = {"ADMIN", "USER"}, username = TEST_ADMIN)
-  public void testIsAdmin() {
+  void testIsAdmin() {
     assertTrue(getMethods().isAdmin());
     assertTrue(getMethods().isUser(TEST_ADMIN_UUID));
     assertFalse(getMethods().isUser(TEST_USERUUID));
@@ -113,7 +101,7 @@ public class IamSecurityExpressionMethodsTests extends GroupRequestsTestUtils {
 
   @Test
   @WithMockUser(roles = {"USER"}, username = TEST_USERNAME)
-  public void testIsNotAdmin() {
+  void testIsNotAdmin() {
     assertFalse(getMethods().isAdmin());
     assertTrue(getMethods().isUser(TEST_USERUUID));
     assertFalse(getMethods().isUser(TEST_ADMIN_UUID));
@@ -136,27 +124,27 @@ public class IamSecurityExpressionMethodsTests extends GroupRequestsTestUtils {
 
   @Test
   @WithMockUser(roles = {"ADMIN", "USER"})
-  public void testIsClientOwnerNoAuthenticatedUser() {
+  void testIsClientOwnerNoAuthenticatedUser() {
     assertFalse(getMethods().isClientOwner("client"));
   }
 
   @Test
   @WithMockUser(roles = {"ADMIN", "USER"}, username = TEST_ADMIN)
-  public void testIsClientOwnerIsAdmin() {
+  void testIsClientOwnerIsAdmin() {
     mockLinkClientToAccount(TEST_ADMIN);
     assertTrue(getMethods().isClientOwner(TEST_CLIENT_ID));
   }
 
- @Test
+  @Test
   @WithMockUser(roles = {"ADMIN", "USER"}, username = "test_200")
-  public void testIsClientOwnerIsUser() {
+  void testIsClientOwnerIsUser() {
     mockLinkClientToAccount("test_200");
     assertTrue(getMethods().isClientOwner(TEST_CLIENT_ID));
   }
 
   @Test
   @WithMockUser(roles = {"ADMIN", "USER"}, username = TEST_ADMIN)
-  public void testIsClientOwnerIsNotUser() {
+  void testIsClientOwnerIsNotUser() {
     mockLinkClientToAccount("test_200");
     assertFalse(getMethods().isClientOwner(TEST_CLIENT_ID));
   }
@@ -164,7 +152,8 @@ public class IamSecurityExpressionMethodsTests extends GroupRequestsTestUtils {
   private void mockLinkClientToAccount(String owner) {
     ClientDetailsEntity clientTest = clientDetailsService.loadClientByClientId(TEST_CLIENT_ID);
     Optional<IamAccount> account = accountRepo.findByUsername(owner);
-    ClientDetailsEntity clientTestUpdate = clientService.linkClientToAccount(clientTest, account.get());
+    ClientDetailsEntity clientTestUpdate =
+        clientService.linkClientToAccount(clientTest, account.get());
 
     doReturn(Optional.of(clientTestUpdate)).when(clientRepo).findByClientId(TEST_CLIENT_ID);
   }

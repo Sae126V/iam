@@ -19,27 +19,24 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import org.junit.jupiter.api.Test;
-import org.mitre.oauth2.model.ClientDetailsEntity;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultMatcher;
-import org.springframework.transaction.annotation.Transactional;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import org.testcontainers.shaded.com.google.common.collect.Sets;
+
+import java.util.Set;
+
+import org.junit.jupiter.api.Test;
+import org.mitre.oauth2.model.ClientDetailsEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import it.infn.mw.iam.IamLoginService;
 import it.infn.mw.iam.api.common.client.AuthorizationGrantType;
 import it.infn.mw.iam.api.common.client.RegisteredClientDTO;
 import it.infn.mw.iam.api.common.client.TokenEndpointAuthenticationMethod;
@@ -48,35 +45,33 @@ import it.infn.mw.iam.test.util.WithAnonymousUser;
 import it.infn.mw.iam.test.util.annotation.IamMockMvcIntegrationTest;
 
 @IamMockMvcIntegrationTest
-@SpringBootTest(classes = {IamLoginService.class})
 class ClientRegistrationAPIControllerTests {
 
   @Autowired
-  private MockMvc mvc;
+  MockMvc mvc;
 
   @Autowired
-  private ObjectMapper mapper;
+  ObjectMapper mapper;
 
   @Autowired
-  private IamClientRepository clientRepository;
+  IamClientRepository clientRepository;
 
-  public static final String IAM_CLIENT_REGISTRATION_API_URL = "/iam/api/client-registration/";
+  static final String IAM_CLIENT_REGISTRATION_API_URL = "/iam/api/client-registration/";
 
-  public static final ResultMatcher UNAUTHORIZED = status().isUnauthorized();
-  public static final ResultMatcher BAD_REQUEST = status().isBadRequest();
-  public static final ResultMatcher CREATED = status().isCreated();
-  public static final ResultMatcher OK = status().isOk();
+  static final ResultMatcher UNAUTHORIZED = status().isUnauthorized();
+  static final ResultMatcher BAD_REQUEST = status().isBadRequest();
+  static final ResultMatcher CREATED = status().isCreated();
+  static final ResultMatcher OK = status().isOk();
 
   @Test
   @WithAnonymousUser
-  @Transactional
   void registerClientWithNullValuesAndCheckDefaultValues()
       throws JsonProcessingException, Exception {
 
     RegisteredClientDTO client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.DEVICE_CODE));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.DEVICE_CODE));
+    client.setScope(Set.of("test"));
     client.setAccessTokenValiditySeconds(null);
     client.setRefreshTokenValiditySeconds(null);
     client.setTokenEndpointAuthMethod(null);
@@ -112,8 +107,8 @@ class ClientRegistrationAPIControllerTests {
 
     client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.CLIENT_CREDENTIALS));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.CLIENT_CREDENTIALS));
+    client.setScope(Set.of("test"));
     client.setAccessTokenValiditySeconds(null);
     client.setRefreshTokenValiditySeconds(null);
     client.setTokenEndpointAuthMethod(null);
@@ -126,15 +121,14 @@ class ClientRegistrationAPIControllerTests {
 
   @Test
   @WithAnonymousUser
-  @Transactional
   void registerClientRaiseParseException() throws JsonProcessingException, Exception {
 
     final String NOT_A_JSON_STRING = "This is not a JSON string";
 
     RegisteredClientDTO client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.CLIENT_CREDENTIALS));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.CLIENT_CREDENTIALS));
+    client.setScope(Set.of("test"));
     client.setTokenEndpointAuthMethod(TokenEndpointAuthenticationMethod.private_key_jwt);
     client.setJwk(NOT_A_JSON_STRING);
 
@@ -148,15 +142,14 @@ class ClientRegistrationAPIControllerTests {
 
   @Test
   @WithAnonymousUser
-  @Transactional
   void registerClientRaiseJwkUriValidationException() throws JsonProcessingException, Exception {
 
     final String NOT_A_URI_STRING = "This is not a URI";
 
     RegisteredClientDTO client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.CLIENT_CREDENTIALS));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.CLIENT_CREDENTIALS));
+    client.setScope(Set.of("test"));
     client.setTokenEndpointAuthMethod(TokenEndpointAuthenticationMethod.private_key_jwt);
     client.setJwksUri(NOT_A_URI_STRING);
 
@@ -172,7 +165,6 @@ class ClientRegistrationAPIControllerTests {
 
   @Test
   @WithAnonymousUser
-  @Transactional
   void registerClientPrivateJwtValidationException() throws JsonProcessingException, Exception {
 
     final String URI_STRING = "http://localhost:8080/jwk";
@@ -180,8 +172,8 @@ class ClientRegistrationAPIControllerTests {
 
     RegisteredClientDTO client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.DEVICE_CODE));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.DEVICE_CODE));
+    client.setScope(Set.of("test"));
     client.setTokenEndpointAuthMethod(TokenEndpointAuthenticationMethod.private_key_jwt);
 
     String expectedMessage =
@@ -207,8 +199,8 @@ class ClientRegistrationAPIControllerTests {
 
     client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.CLIENT_CREDENTIALS));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.CLIENT_CREDENTIALS));
+    client.setScope(Set.of("test"));
     client.setTokenEndpointAuthMethod(TokenEndpointAuthenticationMethod.private_key_jwt);
 
     expectedMessage = "registerClient.request: private_key_jwt requires a jwks uri or a jwk value";
@@ -234,13 +226,12 @@ class ClientRegistrationAPIControllerTests {
 
   @Test
   @WithAnonymousUser
-  @Transactional
   void updateClientPrivateJwtValidationException() throws JsonProcessingException, Exception {
 
     RegisteredClientDTO client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.DEVICE_CODE));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.DEVICE_CODE));
+    client.setScope(Set.of("test"));
 
     mvc
       .perform(post(IAM_CLIENT_REGISTRATION_API_URL).contentType(APPLICATION_JSON)

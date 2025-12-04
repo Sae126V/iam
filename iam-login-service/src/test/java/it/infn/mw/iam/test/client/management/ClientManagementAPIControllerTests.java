@@ -15,62 +15,75 @@
  */
 package it.infn.mw.iam.test.client.management;
 
+import static it.infn.mw.iam.api.common.client.AuthorizationGrantType.CLIENT_CREDENTIALS;
+import static it.infn.mw.iam.api.common.client.TokenEndpointAuthenticationMethod.client_secret_basic;
+import static it.infn.mw.iam.api.common.client.TokenEndpointAuthenticationMethod.none;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import org.junit.jupiter.api.Test;
-import org.mitre.oauth2.model.ClientDetailsEntity;
 import static org.mitre.oauth2.model.ClientDetailsEntity.AuthMethod.NONE;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultMatcher;
-import org.springframework.transaction.annotation.Transactional;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import org.testcontainers.shaded.com.google.common.collect.Sets;
+
+import java.util.Set;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mitre.oauth2.model.ClientDetailsEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import it.infn.mw.iam.IamLoginService;
 import it.infn.mw.iam.api.common.client.AuthorizationGrantType;
-import static it.infn.mw.iam.api.common.client.AuthorizationGrantType.CLIENT_CREDENTIALS;
 import it.infn.mw.iam.api.common.client.RegisteredClientDTO;
 import it.infn.mw.iam.api.common.client.TokenEndpointAuthenticationMethod;
-import static it.infn.mw.iam.api.common.client.TokenEndpointAuthenticationMethod.client_secret_basic;
-import static it.infn.mw.iam.api.common.client.TokenEndpointAuthenticationMethod.none;
 import it.infn.mw.iam.persistence.repository.client.IamClientRepository;
 import it.infn.mw.iam.test.util.WithAnonymousUser;
 import it.infn.mw.iam.test.util.annotation.IamMockMvcIntegrationTest;
+import it.infn.mw.iam.test.util.oauth.MockOAuth2Filter;
 
 @IamMockMvcIntegrationTest
-@SpringBootTest(classes = {IamLoginService.class})
 class ClientManagementAPIControllerTests {
 
-  @Autowired
-  private MockMvc mvc;
+  static final String IAM_CLIENTS_API_URL = "/iam/api/clients/";
+
+  static final ResultMatcher UNAUTHORIZED = status().isUnauthorized();
+  static final ResultMatcher BAD_REQUEST = status().isBadRequest();
+  static final ResultMatcher CREATED = status().isCreated();
+  static final ResultMatcher OK = status().isOk();
 
   @Autowired
-  private ObjectMapper mapper;
+  MockMvc mvc;
 
   @Autowired
-  private IamClientRepository clientRepository;
+  ObjectMapper mapper;
 
-  public static final String IAM_CLIENTS_API_URL = "/iam/api/clients/";
+  @Autowired
+  IamClientRepository clientRepository;
 
-  public static final ResultMatcher UNAUTHORIZED = status().isUnauthorized();
-  public static final ResultMatcher BAD_REQUEST = status().isBadRequest();
-  public static final ResultMatcher CREATED = status().isCreated();
-  public static final ResultMatcher OK = status().isOk();
+  @Autowired
+  MockOAuth2Filter oauth2Filter;
+
+  @BeforeEach
+  void setup() {
+    oauth2Filter.cleanupSecurityContext();
+  }
+
+  @AfterEach
+  void teardown() {
+    oauth2Filter.cleanupSecurityContext();
+  }
 
   @Test
   @WithAnonymousUser
@@ -79,8 +92,8 @@ class ClientManagementAPIControllerTests {
     RegisteredClientDTO client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
     client.setClientId("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.CLIENT_CREDENTIALS));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.CLIENT_CREDENTIALS));
+    client.setScope(Set.of("test"));
 
     mvc
       .perform(post(IAM_CLIENTS_API_URL).contentType(APPLICATION_JSON)
@@ -90,14 +103,13 @@ class ClientManagementAPIControllerTests {
 
   @Test
   @WithMockUser(username = "admin", roles = "ADMIN")
-  @Transactional
   void updateAuthMethodToNone() throws Exception {
 
     RegisteredClientDTO client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
     client.setClientId("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(CLIENT_CREDENTIALS));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(CLIENT_CREDENTIALS));
+    client.setScope(Set.of("test"));
 
     mvc
       .perform(post(IAM_CLIENTS_API_URL).contentType(APPLICATION_JSON)
@@ -127,8 +139,8 @@ class ClientManagementAPIControllerTests {
     RegisteredClientDTO client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
     client.setClientId("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.CLIENT_CREDENTIALS));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.CLIENT_CREDENTIALS));
+    client.setScope(Set.of("test"));
     client.setTokenEndpointAuthMethod(TokenEndpointAuthenticationMethod.private_key_jwt);
     client.setJwk(NOT_A_JSON_STRING);
 
@@ -142,7 +154,6 @@ class ClientManagementAPIControllerTests {
 
   @Test
   @WithMockUser(username = "admin", roles = "ADMIN")
-  @Transactional
   void createClientRaiseURIValidationException() throws Exception {
 
     final String NOT_A_URI_STRING = "This is not a URI string";
@@ -150,8 +161,8 @@ class ClientManagementAPIControllerTests {
     RegisteredClientDTO client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
     client.setClientId("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.CLIENT_CREDENTIALS));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.CLIENT_CREDENTIALS));
+    client.setScope(Set.of("test"));
     client.setTokenEndpointAuthMethod(TokenEndpointAuthenticationMethod.private_key_jwt);
     client.setJwksUri(NOT_A_URI_STRING);
 
@@ -167,7 +178,6 @@ class ClientManagementAPIControllerTests {
 
   @Test
   @WithMockUser(username = "admin", roles = "ADMIN")
-  @Transactional
   void createClientPrivateJwtValidationException() throws Exception {
 
     final String URI_STRING = "http://localhost:8080/jwk";
@@ -176,8 +186,8 @@ class ClientManagementAPIControllerTests {
     RegisteredClientDTO client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
     client.setClientId("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.CLIENT_CREDENTIALS));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.CLIENT_CREDENTIALS));
+    client.setScope(Set.of("test"));
     client.setTokenEndpointAuthMethod(TokenEndpointAuthenticationMethod.private_key_jwt);
 
     String expectedMessage =
@@ -204,14 +214,13 @@ class ClientManagementAPIControllerTests {
 
   @Test
   @WithMockUser(username = "admin", roles = "ADMIN")
-  @Transactional
   void updateClientPrivateJwtValidationException() throws Exception {
 
     RegisteredClientDTO client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
     client.setClientId("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.CLIENT_CREDENTIALS));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.CLIENT_CREDENTIALS));
+    client.setScope(Set.of("test"));
 
     mvc
       .perform(post(IAM_CLIENTS_API_URL).contentType(APPLICATION_JSON)
@@ -233,15 +242,14 @@ class ClientManagementAPIControllerTests {
 
   @Test
   @WithMockUser(username = "admin", roles = "ADMIN")
-  @Transactional
   void testReturnClientSecret() throws Exception {
     String clientPassword = "password";
 
     RegisteredClientDTO client = new RegisteredClientDTO();
     client.setClientName("test-client-creation");
     client.setClientId("test-client-creation");
-    client.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.CLIENT_CREDENTIALS));
-    client.setScope(Sets.newHashSet("test"));
+    client.setGrantTypes(Set.of(AuthorizationGrantType.CLIENT_CREDENTIALS));
+    client.setScope(Set.of("test"));
     client.setClientSecret(clientPassword);
 
     String responseJson = mvc

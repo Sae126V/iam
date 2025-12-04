@@ -16,28 +16,32 @@
 package it.infn.mw.iam.test.api.client;
 
 import static java.lang.String.format;
-
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertEquals;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
-import org.springframework.security.test.context.support.WithAnonymousUser;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+
+import java.util.Set;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrint;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.shaded.com.google.common.collect.Sets;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import static com.google.common.collect.Sets.newHashSet;
 
 import it.infn.mw.iam.IamLoginService;
 import it.infn.mw.iam.api.client.registration.ClientRegistrationApiController;
@@ -47,21 +51,23 @@ import it.infn.mw.iam.api.common.client.TokenEndpointAuthenticationMethod;
 import it.infn.mw.iam.persistence.repository.client.IamClientRepository;
 import it.infn.mw.iam.test.api.TestSupport;
 import it.infn.mw.iam.test.oauth.client_registration.ClientRegistrationTestSupport.ClientJsonStringBuilder;
-import it.infn.mw.iam.test.util.annotation.IamMockMvcIntegrationTest;
 
-@IamMockMvcIntegrationTest
-@WithMockUser(username = "test", roles = "USER")
 @SpringBootTest(classes = {IamLoginService.class})
-public class ClientRegistrationAPIIntegrationTests extends TestSupport {
+@AutoConfigureMockMvc(printOnlyOnFailure = true, print = MockMvcPrint.LOG_DEBUG)
+@TestPropertySource(properties = {
+    "spring.main.allow-bean-definition-overriding=true",
+})
+@Transactional
+class ClientRegistrationAPIIntegrationTests extends TestSupport {
 
   @Autowired
-  private MockMvc mvc;
+  MockMvc mvc;
 
   @Autowired
-  private ObjectMapper mapper;
+  ObjectMapper mapper;
 
   @Autowired
-  private IamClientRepository clientRepository;
+  IamClientRepository clientRepository;
 
   @Test
   @WithAnonymousUser
@@ -106,6 +112,7 @@ public class ClientRegistrationAPIIntegrationTests extends TestSupport {
   }
 
   @Test
+  @WithMockUser(username = "test", roles = "USER")
   @Transactional
   public void clientDetailsVisibleWithAuthentication() throws Exception {
 
@@ -131,6 +138,7 @@ public class ClientRegistrationAPIIntegrationTests extends TestSupport {
   }
 
   @Test
+  @WithMockUser(username = "test", roles = "USER")
   @Transactional
   public void clientRemovalWorksWithAuthentication() throws Exception {
 
@@ -177,8 +185,9 @@ public class ClientRegistrationAPIIntegrationTests extends TestSupport {
     final String url =
         String.format("%s/%s", ClientRegistrationApiController.ENDPOINT, client.getClientId());
 
-    mvc.perform(delete(url).header(org.apache.http.HttpHeaders.AUTHORIZATION,
-        "Bearer " + client.getRegistrationAccessToken()))
+    mvc
+      .perform(delete(url).header(HttpHeaders.AUTHORIZATION,
+          "Bearer " + client.getRegistrationAccessToken()))
       .andExpect(NO_CONTENT);
 
     mvc.perform(get(url))
@@ -187,6 +196,7 @@ public class ClientRegistrationAPIIntegrationTests extends TestSupport {
   }
 
   @Test
+  @WithMockUser(username = "test", roles = "USER")
   @Transactional
   public void tokenLifetimesAreNotEditable() throws Exception {
 
@@ -233,7 +243,7 @@ public class ClientRegistrationAPIIntegrationTests extends TestSupport {
 
     responseJson = mvc
       .perform(put(ClientRegistrationApiController.ENDPOINT + "/" + client.getClientId())
-        .header(org.apache.http.HttpHeaders.AUTHORIZATION, RAT)
+        .header(HttpHeaders.AUTHORIZATION, RAT)
         .contentType(APPLICATION_JSON)
         .content(mapper.writeValueAsString(client)))
       .andExpect(OK)
@@ -257,9 +267,9 @@ public class ClientRegistrationAPIIntegrationTests extends TestSupport {
   void testClientPublicWithoutSecret() throws Exception {
     RegisteredClientDTO publicClient = new RegisteredClientDTO();
     publicClient.setClientName("test-public-client");
-    publicClient.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.CODE));
-    publicClient.setScope(Sets.newHashSet("openid"));
-    publicClient.setRedirectUris(newHashSet("https://test.example/cb"));
+    publicClient.setGrantTypes(Set.of(AuthorizationGrantType.CODE));
+    publicClient.setScope(Set.of("openid"));
+    publicClient.setRedirectUris(Set.of("https://test.example/cb"));
     publicClient.setTokenEndpointAuthMethod(TokenEndpointAuthenticationMethod.none);
 
     String clientJsonRequest = mapper.writeValueAsString(publicClient);
@@ -278,24 +288,26 @@ public class ClientRegistrationAPIIntegrationTests extends TestSupport {
     RegisteredClientDTO publicClient2 = new RegisteredClientDTO();
     publicClient2.setClientName("test-public-client");
     publicClient2.setClientId(client.getClientId());
-    publicClient2.setGrantTypes(Sets.newHashSet(AuthorizationGrantType.CODE));
-    publicClient2.setScope(Sets.newHashSet("openid"));
-    publicClient2.setRedirectUris(newHashSet("https://test.example/cb"));
+    publicClient2.setGrantTypes(Set.of(AuthorizationGrantType.CODE));
+    publicClient2.setScope(Set.of("openid"));
+    publicClient2.setRedirectUris(Set.of("https://test.example/cb"));
     publicClient2.setTokenEndpointAuthMethod(TokenEndpointAuthenticationMethod.none);
     publicClient2.setRegistrationAccessToken(null);
 
     // Now try to update the public client by providing a client secret
     publicClient2.setClientSecret("secret");
 
-    responseJson = mvc
-      .perform(put(ClientRegistrationApiController.ENDPOINT + "/" + client.getClientId())
-        .header(org.apache.http.HttpHeaders.AUTHORIZATION, format("Bearer %s", client.getRegistrationAccessToken()))
-        .contentType(APPLICATION_JSON)
-        .content(mapper.writeValueAsString(publicClient2)))
-      .andExpect(OK)
-      .andReturn()
-      .getResponse()
-      .getContentAsString();
+    responseJson =
+        mvc
+          .perform(put(ClientRegistrationApiController.ENDPOINT + "/" + client.getClientId())
+            .header(HttpHeaders.AUTHORIZATION,
+                format("Bearer %s", client.getRegistrationAccessToken()))
+            .contentType(APPLICATION_JSON)
+            .content(mapper.writeValueAsString(publicClient2)))
+          .andExpect(OK)
+          .andReturn()
+          .getResponse()
+          .getContentAsString();
 
     RegisteredClientDTO clientDto = mapper.readValue(responseJson, RegisteredClientDTO.class);
     assertNull(clientDto.getClientSecret());

@@ -44,7 +44,7 @@ import it.infn.mw.iam.test.oauth.client_registration.ClientRegistrationTestSuppo
 import it.infn.mw.iam.test.util.annotation.IamRandomPortIntegrationTest;
 
 @IamRandomPortIntegrationTest
-public class RegistrationAccessTokenTests extends TestSupport {
+class RegistrationAccessTokenTests extends TestSupport {
 
   @Value("${local.server.port}")
   private Integer iamPort;
@@ -58,21 +58,20 @@ public class RegistrationAccessTokenTests extends TestSupport {
   private String ownedClientsUrl;
 
 
-
   @BeforeAll
-  public static void init() {
+  static void init() {
     TestUtils.initRestAssured();
   }
 
   @BeforeEach
-  public void setup() {
+  void setup() {
     RestAssured.port = iamPort;
     registerUrl = String.format(LOCALHOST_URL_TEMPLATE + "/iam/api/client-registration", iamPort);
     ownedClientsUrl = String.format(LOCALHOST_URL_TEMPLATE + "/iam/account/me/clients", iamPort);
   }
 
   @Test
-  public void testRatWorkAsExpected() throws ParseException {
+  void testRatWorkAsExpected() throws ParseException {
 
     String clientJson =
         ClientJsonStringBuilder.builder().scopes("openid").grantTypes("authorization_code").build();
@@ -160,7 +159,7 @@ public class RegistrationAccessTokenTests extends TestSupport {
   }
 
   @Test
-  public void testRedeemClientFlow() {
+  void testRedeemClientFlow() {
 
     // 1. Register a client
     String clientJson = ClientJsonStringBuilder.builder().scopes("openid").grantTypes("authorization_code").build();

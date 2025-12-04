@@ -23,7 +23,6 @@ import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
 import org.mitre.oauth2.exception.DeviceCodeCreationException;
 import org.mitre.oauth2.model.AuthenticationHolderEntity;
 import org.mitre.oauth2.model.AuthorizationCodeEntity;
@@ -39,7 +38,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.oauth2.common.util.RandomValueStringGenerator;
 import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.transaction.annotation.Transactional;
 
 import it.infn.mw.iam.IamLoginService;
@@ -54,7 +52,6 @@ import it.infn.mw.iam.test.api.tokens.TestTokensUtils;
 import it.infn.mw.iam.test.util.annotation.IamMockMvcIntegrationTest;
 
 @SuppressWarnings("deprecation")
-@RunWith(SpringRunner.class)
 @IamMockMvcIntegrationTest
 @SpringBootTest(classes = {IamLoginService.class})
 @TestPropertySource(properties = "scheduling.enabled=false")
@@ -110,7 +107,7 @@ class GarbageCollectorIntegrationTests extends TestTokensUtils {
   }
 
   @BeforeEach
-  public void cleanAll() {
+  void cleanAll() {
     siteRepository.deleteAll();
     codeRepository.deleteAll();
     accessTokenRepository.deleteAll();
@@ -121,7 +118,7 @@ class GarbageCollectorIntegrationTests extends TestTokensUtils {
 
   @Test
   @Transactional
-  public void clearExpiredApprovedSites() {
+  void clearExpiredApprovedSites() {
 
     assertThat(siteRepository.count(), equalTo(0L));
     approvedSiteService.createApprovedSite(PASSWORD_CLIENT_ID, TEST_USERNAME, yesterday(),
@@ -133,7 +130,7 @@ class GarbageCollectorIntegrationTests extends TestTokensUtils {
 
   @Test
   @Transactional
-  public void clearExpiredAuthorizationCodes() {
+  void clearExpiredAuthorizationCodes() {
 
     assertThat(codeRepository.count(), equalTo(0L));
     codeRepository.save(createAuthorizationCode());
@@ -144,7 +141,7 @@ class GarbageCollectorIntegrationTests extends TestTokensUtils {
 
   @Test
   @Transactional
-  public void clearExpiredTokensAndOrphanedAuthenticationHolder() {
+  void clearExpiredTokensAndOrphanedAuthenticationHolder() {
 
     assertThat(accessTokenRepository.count(), equalTo(0L));
     assertThat(refreshTokenRepository.count(), equalTo(0L));
@@ -172,11 +169,11 @@ class GarbageCollectorIntegrationTests extends TestTokensUtils {
 
   @Test
   @Transactional
-  public void clearExpiredDeviceCodes() throws DeviceCodeCreationException {
+  void clearExpiredDeviceCodes() throws DeviceCodeCreationException {
 
     assertThat(deviceCodeRepository.count(), equalTo(0L));
     DeviceCode dc = codeService.createNewDeviceCode(Set.of("openid"),
-        loadTestClient(PASSWORD_CLIENT_ID), Map.of());
+        loadTestClient(DEVICE_CODE_CLIENT_ID), Map.of());
     dc.setExpiration(yesterday());
     deviceCodeRepository.save(dc);
     assertThat(deviceCodeRepository.count(), equalTo(1L));

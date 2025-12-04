@@ -25,14 +25,12 @@ import java.util.Base64;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mitre.oauth2.model.PKCEAlgorithm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,43 +44,34 @@ import it.infn.mw.iam.test.TestUtils;
 import it.infn.mw.iam.test.repository.ScopePolicyTestUtils;
 import it.infn.mw.iam.test.util.annotation.IamRandomPortIntegrationTest;
 
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @IamRandomPortIntegrationTest
-@TestPropertySource(properties = {"iam.access_token.include_scope=true"})
-@ActiveProfiles({"h2-test", "h2", "wlcg-scopes"})
-public class AuthorizationCodeWithPKCEIntegrationTests extends ScopePolicyTestUtils {
+class AuthorizationCodeWithPKCEIntegrationTests extends ScopePolicyTestUtils {
 
-  public static final String TEST_CLIENT_ID = "client";
-  public static final String TEST_CLIENT_SECRET = "secret";
-  public static final String TEST_CLIENT_REDIRECT_URI =
+  static final String TEST_CLIENT_ID = "client";
+  static final String TEST_CLIENT_SECRET = "secret";
+  static final String TEST_CLIENT_REDIRECT_URI =
       "https://iam.local.io/iam-test-client/openid_connect_login";
 
-  public static final String LOCALHOST_URL_TEMPLATE = "http://localhost:%d";
+  static final String LOCALHOST_URL_TEMPLATE = "http://localhost:%d";
 
-  public static final String RESPONSE_TYPE_CODE = "code";
+  static final String SCOPE = "openid profile";
 
-  public static final String SCOPE =
-      "openid profile scim:read scim:write offline_access iam:admin.read iam:admin.write";
+  static final String TEST_USER_NAME = "test";
+  static final String TEST_USER_PASSWORD = "password";
 
-  public static final String TEST_USER_NAME = "test";
-  public static final String TEST_USER_PASSWORD = "password";
-
-  public static final String TEST_RESOURCE_1 = "http://example1.org";
-  public static final String TEST_RESOURCE_2 = "http://example2.org";
-  public static final String TEST_FULL_RESOURCE = TEST_RESOURCE_1 + " " + TEST_RESOURCE_2;
-
-  private String loginUrl;
-  private String authorizeUrl;
-  private String tokenUrl;
+  String loginUrl;
+  String authorizeUrl;
+  String tokenUrl;
 
   @Value("${local.server.port}")
-  private Integer iamPort;
+  Integer iamPort;
 
   @Autowired
   ObjectMapper mapper;
 
   @Autowired
-  private IamAccountRepository accountRepo;
+  IamAccountRepository accountRepo;
 
   IamAccount findTestAccount() {
     return accountRepo.findByUsername("test")
@@ -102,8 +91,8 @@ public class AuthorizationCodeWithPKCEIntegrationTests extends ScopePolicyTestUt
     return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
   }
 
-  private ValidatableResponse getTokenResponseWithPkce(String codeVerifier, String codeChallenge, String codeChallengeMethod)
-      throws Exception {
+  private ValidatableResponse getTokenResponseWithPkce(String codeVerifier, String codeChallenge,
+      String codeChallengeMethod) {
 
     ValidatableResponse resp1 = RestAssured.given()
       .queryParam("response_type", "code")
@@ -184,13 +173,13 @@ public class AuthorizationCodeWithPKCEIntegrationTests extends ScopePolicyTestUt
   }
 
   @BeforeAll
-  public static void init() {
+  static void init() {
     TestUtils.initRestAssured();
 
   }
 
   @BeforeEach
-  public void setup() {
+  void setup() {
     RestAssured.port = iamPort;
     loginUrl = String.format(LOCALHOST_URL_TEMPLATE + "/login", iamPort);
     authorizeUrl = String.format(LOCALHOST_URL_TEMPLATE + "/authorize", iamPort);
@@ -198,7 +187,7 @@ public class AuthorizationCodeWithPKCEIntegrationTests extends ScopePolicyTestUt
   }
 
   @Test
-  public void testAuthzCodeWithPkceShaCodeChallenge() throws Exception {
+  void testAuthzCodeWithPkceShaCodeChallenge() throws Exception {
 
     String codeVerifier = generateCodeVerifier();
     String codeChallenge = generateSha256CodeChallenge(codeVerifier);
@@ -208,7 +197,7 @@ public class AuthorizationCodeWithPKCEIntegrationTests extends ScopePolicyTestUt
   }
 
   @Test
-  public void testAuthzCodeWithPkcePlainCodeChallenge() throws Exception {
+  void testAuthzCodeWithPkcePlainCodeChallenge() {
 
     String codeVerifier = generateCodeVerifier();
 
@@ -217,7 +206,7 @@ public class AuthorizationCodeWithPKCEIntegrationTests extends ScopePolicyTestUt
   }
 
   @Test
-  public void testAuthzCodeWithPkceWrongS256Code() throws Exception {
+  void testAuthzCodeWithPkceWrongS256Code() throws Exception {
 
     String codeVerifier = generateCodeVerifier();
     String codeChallenge = generateSha256CodeChallenge(codeVerifier);
@@ -227,7 +216,7 @@ public class AuthorizationCodeWithPKCEIntegrationTests extends ScopePolicyTestUt
   }
 
   @Test
-  public void testAuthzCodeWithPkceWrongPlainCode() throws Exception {
+  void testAuthzCodeWithPkceWrongPlainCode() throws Exception {
 
     String codeVerifier = generateCodeVerifier();
     String codeChallenge = generateSha256CodeChallenge(codeVerifier);
@@ -237,7 +226,7 @@ public class AuthorizationCodeWithPKCEIntegrationTests extends ScopePolicyTestUt
   }
 
   @Test
-  public void testAuthzCodeWithPkceNullCode() throws Exception {
+  void testAuthzCodeWithPkceNullCode() throws Exception {
 
     String codeVerifier = generateCodeVerifier();
     String codeChallenge = generateSha256CodeChallenge(codeVerifier);
@@ -247,7 +236,7 @@ public class AuthorizationCodeWithPKCEIntegrationTests extends ScopePolicyTestUt
   }
 
   @Test
-  public void testAuthzCodeWithPkceWrongCodeChallengeMethod() throws Exception {
+  void testAuthzCodeWithPkceWrongCodeChallengeMethod() throws Exception {
 
     String codeVerifier = generateCodeVerifier();
     String codeChallenge = generateSha256CodeChallenge(codeVerifier);
